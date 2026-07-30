@@ -2,6 +2,7 @@
 
 <helmet>
   <link rel="stylesheet" href="./_ds/industry-c6ce59bb-199d-4796-96f0-a00e8f4789a4/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { margin: 0; }
     a { color: var(--color-accent-700); }
@@ -10,18 +11,60 @@
   </style>
 </helmet>
 
+<sc-if value="{{ showConfigMissing }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--color-bg); padding:var(--space-6);">
+    <div class="card blueprint elev-sm" style="max-width:480px; padding:var(--space-6);">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3 style="margin-top:0;">Falta conectar Supabase</h3>
+      <p class="text-muted">Configurá <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> al principio del script de <code>CRM Broker Seguros.dc.html</code>. Los pasos completos están en <code>SUPABASE_SETUP.md</code>.</p>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ authLoading }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted, #888);">Cargando…</div>
+</sc-if>
+
+<sc-if value="{{ showLogin }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--color-bg);">
+    <div class="card blueprint elev-sm" style="width:340px; padding:var(--space-6);">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <img src="./assets/mc-logo.png" alt="MC Asesores de Seguros" style="height:48px; width:auto; display:block; margin:0 auto var(--space-5);">
+      <div class="field"><label>Email</label><input class="input" type="email" value="{{ authEmail }}" sc-camel-on-change="{{ onAuthEmailChange }}" sc-camel-on-key-down="{{ onAuthKeyDown }}"></div>
+      <div class="field"><label>Contraseña</label><input class="input" type="password" value="{{ authPassword }}" sc-camel-on-change="{{ onAuthPasswordChange }}" sc-camel-on-key-down="{{ onAuthKeyDown }}"></div>
+      <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
+        <p style="color:#b00020; font-size:13px;">{{ authError }}</p>
+      </sc-if>
+      <button class="btn btn-primary btn-block" sc-camel-on-click="{{ signIn }}" disabled="{{ authSubmitting }}">{{ signInLabel }}</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ showApp }}" hint-placeholder-val="{{ false }}">
 <div style="min-height:100vh; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); display:flex; flex-direction:column;">
 
   <div style="border-bottom:1px solid var(--color-divider); background:#ffffff; position:sticky; top:0; z-index:20;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); max-width:1280px; margin:0 auto; padding:var(--space-3) var(--space-6); box-sizing:border-box;">
       <img src="./assets/mc-logo.png" alt="MC Asesores de Seguros" style="height:60px; width:auto; display:block;">
-      <nav style="display:flex; gap:var(--space-2);">
+      <nav style="display:flex; gap:var(--space-2); align-items:center;">
         <button class="{{ navDashboardBtnClass }}" sc-camel-on-click="{{ goDashboard }}">Dashboard</button>
         <button class="{{ navClientsBtnClass }}" sc-camel-on-click="{{ goClients }}">Clientes</button>
         <button class="{{ navTasksBtnClass }}" sc-camel-on-click="{{ goTasks }}">Tareas</button>
+        <span class="text-muted" style="margin-left:var(--space-2); font-size:13px;">{{ currentUserName }}</span>
+        <button class="btn btn-ghost" sc-camel-on-click="{{ signOut }}">Salir</button>
       </nav>
     </div>
   </div>
+
+  <sc-if value="{{ loadError }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fdecea; color:#b00020; padding:var(--space-2) var(--space-6); font-size:13px;">{{ loadError }}</div>
+  </sc-if>
+
+  <sc-if value="{{ showAppLoading }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted, #888);">Cargando datos…</div>
+  </sc-if>
+
+  <sc-if value="{{ showAppReady }}" hint-placeholder-val="{{ true }}">
 
   <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
     <div style="flex:1; padding:var(--space-8) var(--space-6); max-width:1280px; margin:0 auto; width:100%; box-sizing:border-box;">
@@ -1090,14 +1133,15 @@
         </div>
       </div>
     </div>
-  
 
 
+  </sc-if>
 </div>
+</sc-if>
 
 
 <script type="text/x-dc" data-dc-script="">
-const TODAY = new Date('2026-07-23');
+const TODAY = new Date();
 
 const ASSET_TYPES = [
   { key: 'auto', label: 'Autos / Motos', singular: 'un auto o moto', fields: [
@@ -1139,14 +1183,6 @@ const ASEGURADORAS = ['Allianz', 'Barbuss', 'BBVA', 'Berkley', 'Chubb', 'Experta
 
 function nombreCompleto(c) { return c.apellido + ', ' + c.nombre; }
 
-const USERS = [
-  { id: 'u1', nombre: 'María Cabrera', iniciales: 'MC' },
-  { id: 'u2', nombre: 'Joseph Fonseca', iniciales: 'JF' },
-  { id: 'u3', nombre: 'Lucas Herrera', iniciales: 'LH' },
-  { id: 'u4', nombre: 'Valentina Ríos', iniciales: 'VR' },
-];
-function userById(id) { return USERS.find(u => u.id === id); }
-
 function quoteTagClass(estado) {
   if (estado === 'Aceptada') return 'tag-accent';
   if (estado === 'Rechazada') return 'tag-neutral';
@@ -1181,9 +1217,6 @@ function tituloFor(typeKey, asset) {
   return 'Bien';
 }
 
-let uidCounter = 1000;
-function uid() { return 'id' + (uidCounter++); }
-
 function emptyClientForm() {
   return { apellido: '', nombre: '', tipoDocumento: 'DNI', dni: '', condicionFiscal: 'Consumidor Final', telefono: '', email: '', direccion: '', fechaNacimiento: '', provincia: '', localidad: '', codigoPostal: '' };
 }
@@ -1193,78 +1226,83 @@ function emptyAssetForm() {
     operacion: 'Nuevo', tipoVehiculo: 'Auto', fechaCotizacion: '', estadoCotizacion: 'Cotizada', esNuestra: false, formaPago: 'Efectivo', vencimientoPagoDia: '1', vencimientoPagoMes: '1', nChasis: '', nMotor: '', monedaSuma: '$', monedaPrima: '$', coberturaContratada: 'Resp. Civil', franquicia: 'N/A' };
 }
 
-function seedClients() {
-  return [
-    {
-      id: 'c1', apellido: 'Fernández', nombre: 'Roberto', tipoDocumento: 'DNI', dni: '24.556.891', condicionFiscal: 'Consumidor Final', telefono: '11-4455-6677', email: 'rfernandez@mail.com',
-      fechaNacimiento: '1978-03-14', provincia: 'CABA', localidad: 'CABA', codigoPostal: '1428',
-      direccion: 'Av. Cabildo 2140, CABA', actualizado: '18/07/2026',
-      bienes: {
-        auto: [{ id: uid(), aseguradora: 'La Segunda', nPoliza: 'AU-4521', sumaAsegurada: 8500000, prima: 42000, vigenciaDesde: '2026-01-10', vigenciaHasta: '2027-01-10', marca: 'Toyota', modelo: 'Corolla', anio: '2022', patente: 'AC123DE' }],
-        inmueble: [{ id: uid(), aseguradora: 'Sancor Seguros', nPoliza: 'IN-9081', sumaAsegurada: 95000000, prima: 68000, vigenciaDesde: '2025-09-01', vigenciaHasta: '2026-08-05', direccion: 'Av. Cabildo 2140, CABA', tipoInmueble: 'Departamento', m2: '75' }],
-        negocio: [], vidaSalud: [], art: [], ap: [], caucion: [], tecnico: [],
-      },
-      siniestros: [{ id: uid(), fecha: '2026-05-12', tipo: 'auto', estado: 'Cerrado', descripcion: 'Choque leve en cochera, daños en paragolpes.' }],
-      documentos: [{ id: uid(), nombre: 'DNI frente y dorso', tipo: 'DNI', fecha: '10/01/2026' }],
-      notas: [{ id: uid(), author: 'M. Cabrera', date: '15/07/2026', text: 'Cliente prefiere contacto por WhatsApp.' }],
-    },
-    {
-      id: 'c2', apellido: 'Gómez', nombre: 'Lucía', tipoDocumento: 'CUIT', dni: '30-30112447-5', condicionFiscal: 'Responsable Inscripto', telefono: '11-2233-9988', email: 'lucia.gomez@mail.com',
-      fechaNacimiento: '1990-11-02', provincia: 'Buenos Aires', localidad: 'Vicente López', codigoPostal: '1638',
-      direccion: 'San Martín 456, Vicente López', actualizado: '20/07/2026',
-      bienes: {
-        auto: [{ id: uid(), aseguradora: 'Federación Patronal', nPoliza: 'AU-7712', sumaAsegurada: 6200000, prima: 31000, vigenciaDesde: '2025-08-01', vigenciaHasta: '2026-08-01', marca: 'Volkswagen', modelo: 'Vento', anio: '2021', patente: 'AE456FG' }],
-        inmueble: [], negocio: [{ id: uid(), aseguradora: 'Zurich', nPoliza: 'NG-2201', sumaAsegurada: 30000000, prima: 55000, vigenciaDesde: '2026-02-01', vigenciaHasta: '2027-02-01', razonSocial: 'Gómez Indumentaria SRL', rubro: 'Comercio minorista', direccion: 'San Martín 456' }],
-        vidaSalud: [], art: [{ id: uid(), aseguradora: 'Provincia ART', nPoliza: 'ART-330', sumaAsegurada: 0, prima: 24000, vigenciaDesde: '2026-01-01', vigenciaHasta: '2027-01-01', razonSocial: 'Gómez Indumentaria SRL', cantEmpleados: '6' }],
-        ap: [], caucion: [], tecnico: [],
-      },
-      siniestros: [], documentos: [], notas: [],
-    },
-    {
-      id: 'c3', apellido: 'Iturralde', nombre: 'Marcelo', tipoDocumento: 'DNI', dni: '18.774.321', condicionFiscal: 'Monotributista', telefono: '11-6677-1122', email: 'marcelo.it@mail.com',
-      fechaNacimiento: '1965-07-22', provincia: 'Buenos Aires', localidad: 'Pilar', codigoPostal: '1629',
-      direccion: 'Ruta 8 Km 45, Pilar', actualizado: '05/07/2026',
-      bienes: {
-        auto: [], inmueble: [{ id: uid(), aseguradora: 'La Caja', nPoliza: 'IN-5541', sumaAsegurada: 150000000, prima: 120000, vigenciaDesde: '2025-07-20', vigenciaHasta: '2026-07-28', direccion: 'Ruta 8 Km 45, Pilar', tipoInmueble: 'Casa', m2: '320' }],
-        negocio: [], vidaSalud: [{ id: uid(), aseguradora: 'Galicia Seguros', nPoliza: 'VS-118', sumaAsegurada: 20000000, prima: 15000, vigenciaDesde: '2026-03-01', vigenciaHasta: '2027-03-01', tipoCobertura: 'Vida', beneficiarios: 'Cónyuge e hijos' }],
-        art: [], ap: [], caucion: [{ id: uid(), aseguradora: 'Aseguradora de Créditos', nPoliza: 'CA-901', sumaAsegurada: 5000000, prima: 9000, vigenciaDesde: '2025-11-01', vigenciaHasta: '2026-08-10', tipoCaucion: 'Alquiler comercial', beneficiario: 'Inmobiliaria del Norte' }],
-        tecnico: [],
-      },
-      siniestros: [{ id: uid(), fecha: '2026-06-30', tipo: 'inmueble', estado: 'En proceso', descripcion: 'Filtración de agua por tormenta, daño en techo.' }],
-      documentos: [{ id: uid(), nombre: 'Escritura propiedad', tipo: 'Título', fecha: '20/07/2025' }, { id: uid(), nombre: 'Foto frente de la casa', tipo: 'Foto', fecha: '20/07/2025' }],
-      notas: [],
-    },
-    {
-      id: 'c4', apellido: 'Suárez', nombre: 'Andrea', tipoDocumento: 'CUIL', dni: '27-27998005-4', condicionFiscal: 'Consumidor Final', telefono: '11-3344-5566', email: 'andrea.suarez@mail.com',
-      fechaNacimiento: '1984-05-30', provincia: 'Santa Fe', localidad: 'Rosario', codigoPostal: '2000',
-      direccion: 'Belgrano 1200, Rosario', actualizado: '22/07/2026',
-      bienes: {
-        auto: [{ id: uid(), aseguradora: 'Mercantil Andina', nPoliza: 'AU-1190', sumaAsegurada: 9800000, prima: 51000, vigenciaDesde: '2026-06-01', vigenciaHasta: '2027-06-01', marca: 'Ford', modelo: 'Territory', anio: '2023', patente: 'AF789HI' }],
-        inmueble: [], negocio: [], vidaSalud: [], art: [], ap: [{ id: uid(), aseguradora: 'La Segunda', nPoliza: 'AP-410', sumaAsegurada: 10000000, prima: 8000, vigenciaDesde: '2026-01-15', vigenciaHasta: '2026-08-01', cobertura: 'Muerte e invalidez total' }],
-        caucion: [], tecnico: [{ id: uid(), aseguradora: 'Sancor Seguros', nPoliza: 'TE-303', sumaAsegurada: 40000000, prima: 33000, vigenciaDesde: '2026-04-01', vigenciaHasta: '2027-04-01', tipoEquipo: 'Obra en construcción - local comercial' }],
-      },
-      siniestros: [], documentos: [], notas: [{ id: uid(), author: 'M. Cabrera', date: '01/07/2026', text: 'Renovar cotización de vida antes de fin de año.' }],
-    },
-  ];
+// ── Supabase ──────────────────────────────────────────────────────────────
+// Reemplazá estos dos valores por los de tu proyecto (Settings → API en
+// supabase.com) — ver SUPABASE_SETUP.md para la guía completa paso a paso.
+const SUPABASE_URL = 'PENDIENTE_CONFIGURAR';
+const SUPABASE_ANON_KEY = 'PENDIENTE_CONFIGURAR';
+const SUPABASE_CONFIGURED = SUPABASE_URL !== 'PENDIENTE_CONFIGURAR' && SUPABASE_ANON_KEY !== 'PENDIENTE_CONFIGURAR';
+const sb = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+function moneyToNumber(v) {
+  if (v === '' || v == null) return null;
+  const digits = String(v).replace(/\D/g, '');
+  return digits ? Number(digits) : null;
 }
 
-function seedCotizaciones() {
-  return [
-    { id: uid(), clienteNombre: 'Fernández, Roberto', bien: 'Auto Toyota Corolla', aseguradora: 'La Segunda', costo: 39500, fecha: '2026-07-20', estado: 'Aceptada' },
-    { id: uid(), clienteNombre: 'Ramos, Diego (prospecto)', bien: 'Inmueble - Casa', aseguradora: 'Sancor Seguros', costo: 112000, fecha: '2026-07-18', estado: 'Pendiente' },
-    { id: uid(), clienteNombre: 'Gómez, Lucía', bien: 'Negocio - Comercio minorista', aseguradora: 'Zurich', costo: 58000, fecha: '2026-07-14', estado: 'Pendiente' },
-    { id: uid(), clienteNombre: 'Suárez, Andrea', bien: 'Seguro técnico - Obra', aseguradora: 'Sancor Seguros', costo: 31000, fecha: '2026-07-09', estado: 'Rechazada' },
-  ];
+// A policy row's category-specific columns live in `details` (jsonb); the
+// rest map 1:1 onto real columns. This mirrors ASSET_TYPES' own `fields`
+// metadata, which already treats those extra fields generically.
+const POLICY_BASE_FIELDS = ['aseguradora', 'nPoliza', 'sumaAsegurada', 'prima', 'monedaSuma', 'monedaPrima',
+  'vigenciaDesde', 'vigenciaHasta', 'coberturaContratada', 'franquicia', 'operacion', 'formaPago', 'vencimientoPagoDia'];
+
+function policyRowToAsset(row) {
+  return {
+    id: row.id, aseguradora: row.aseguradora || '', nPoliza: row.n_poliza || '',
+    sumaAsegurada: row.suma_asegurada ?? '', prima: row.prima ?? '',
+    monedaSuma: row.moneda_suma || '$', monedaPrima: row.moneda_prima || '$',
+    vigenciaDesde: row.vigencia_desde || '', vigenciaHasta: row.vigencia_hasta || '',
+    coberturaContratada: row.cobertura_contratada || '', franquicia: row.franquicia || '',
+    operacion: row.operacion || 'Nuevo', formaPago: row.forma_pago || 'Efectivo',
+    vencimientoPagoDia: row.vencimiento_pago_dia || '1',
+    ...(row.details || {}),
+  };
+}
+
+function assetFormToPolicyRow(typeKey, clientId, f) {
+  const details = {};
+  for (const k in f) if (!POLICY_BASE_FIELDS.includes(k) && k !== 'esNuestra' && k !== 'fechaCotizacion' && k !== 'estadoCotizacion' && k !== 'vencimientoPagoMes') details[k] = f[k];
+  return {
+    client_id: clientId, type_key: typeKey,
+    aseguradora: f.aseguradora || '', n_poliza: f.nPoliza || '',
+    suma_asegurada: moneyToNumber(f.sumaAsegurada), prima: moneyToNumber(f.prima),
+    moneda_suma: f.monedaSuma || '$', moneda_prima: f.monedaPrima || '$',
+    vigencia_desde: f.vigenciaDesde || null, vigencia_hasta: f.vigenciaHasta || null,
+    cobertura_contratada: f.coberturaContratada || '', franquicia: f.franquicia || '',
+    operacion: f.operacion || 'Nuevo', forma_pago: f.formaPago || 'Efectivo',
+    vencimiento_pago_dia: f.vencimientoPagoDia || '1',
+    details,
+  };
+}
+
+function quoteFormToRow(typeKey, clientId, f) {
+  return {
+    client_id: clientId, type_key: typeKey,
+    bien: [f.tipoVehiculo, f.marca, f.modelo].filter(Boolean).join(' '),
+    aseguradora: f.aseguradora || '',
+    costo: moneyToNumber(f.prima) ?? moneyToNumber(f.sumaAsegurada) ?? 0,
+    fecha: f.fechaCotizacion || new Date().toISOString().slice(0, 10),
+    estado: f.estadoCotizacion || 'Cotizada',
+    details: f,
+  };
+}
+
+function quoteRowToClientQuote(row) {
+  return { id: row.id, typeKey: row.type_key, fecha: row.fecha, bien: row.bien,
+    aseguradora: row.aseguradora, costo: Number(row.costo) || 0, estado: row.estado,
+    details: row.details || {} };
 }
 
 class Component extends DCLogic {
   state = {
+    session: null, authLoading: true, authEmail: '', authPassword: '', authError: '', authSubmitting: false,
+    dataLoading: true, loadError: '',
+    users: [], clients: [], cotizaciones: [],
+
     view: 'dashboard',
     selectedClientId: null,
     activeTab: 'resumen',
     search: '',
-    clients: seedClients(),
-    cotizaciones: seedCotizaciones(),
     clientDialogOpen: false, editingClientId: null, clientForm: emptyClientForm(),
     showAssetModal: false, editingAssetId: null, editingQuoteId: null, assetForm: emptyAssetForm(),
     showSiniestroModal: false, siniestroForm: { fecha: '', tipo: 'auto', estado: 'Abierto', descripcion: '' },
@@ -1273,17 +1311,141 @@ class Component extends DCLogic {
     quoteSearchDialogOpen: false, quoteSearch: '',
     showQuoteTypeModal: false, quoteTypeChoice: 'auto',
     showPolizasModal: false, showVencimientosModal: false, showSiniestrosModal: false, showCotizacionesModal: false,
-    taskLists: [
-      { id: 'tl1', nombre: 'Mis tareas', tareas: [
-        { id: uid(), texto: 'Llamar a Roberto Fernández por renovación', hecha: false, recordatorio: '2026-07-24', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' },
-        { id: uid(), texto: 'Enviar cotización a Diego Ramos', hecha: false, recordatorio: '', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' },
-        { id: uid(), texto: 'Actualizar pólizas vencidas', hecha: true, recordatorio: '', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' },
-      ] },
-      { id: 'tl2', nombre: 'Renovaciones', tareas: [] },
-    ],
-    activeTaskListId: 'tl1', newTaskText: '', newListName: '',
+    taskLists: [],
+    activeTaskListId: null, newTaskText: '', newListName: '',
     taskDetailOpen: false, taskDetailId: null, newStepText: '',
   };
+
+  // ── Auth + data lifecycle ────────────────────────────────────────────────
+  componentDidMount() {
+    if (!SUPABASE_CONFIGURED) { this.setState({ authLoading: false }); return; }
+    sb.auth.getSession().then(({ data }) => {
+      this.setState({ session: data.session, authLoading: false });
+      if (data.session) { this.loadAll(); this.subscribeRealtime(); }
+    });
+    this.authListener = sb.auth.onAuthStateChange((_event, session) => {
+      const hadSession = !!this.state.session;
+      this.setState({ session, authLoading: false });
+      if (session && !hadSession) { this.loadAll(); this.subscribeRealtime(); }
+      if (!session) { this.unsubscribeRealtime(); this.setState({ clients: [], cotizaciones: [], taskLists: [], users: [] }); }
+    });
+  }
+  componentWillUnmount() {
+    this.unsubscribeRealtime();
+    if (this.authListener) this.authListener.data.subscription.unsubscribe();
+  }
+  subscribeRealtime = () => {
+    if (this.realtimeChannel) return;
+    let channel = sb.channel('crm-sync');
+    ['clients', 'policies', 'quotes', 'claims', 'documents', 'notes', 'task_lists', 'tasks', 'task_steps', 'profiles']
+      .forEach((table) => { channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, this.scheduleReload); });
+    channel.subscribe();
+    this.realtimeChannel = channel;
+  };
+  unsubscribeRealtime = () => {
+    if (this.realtimeChannel) { sb.removeChannel(this.realtimeChannel); this.realtimeChannel = null; }
+    clearTimeout(this._reloadTimer);
+  };
+  scheduleReload = () => {
+    clearTimeout(this._reloadTimer);
+    this._reloadTimer = setTimeout(() => this.loadAll(), 400);
+  };
+
+  loadAll = async () => {
+    const [
+      { data: profileRows, error: eProfiles },
+      { data: clientRows, error: eClients },
+      { data: policyRows, error: ePolicies },
+      { data: quoteRows, error: eQuotes },
+      { data: claimRows, error: eClaims },
+      { data: documentRows, error: eDocuments },
+      { data: noteRows, error: eNotes },
+      { data: taskListRows, error: eTaskLists },
+      { data: taskRows, error: eTasks },
+      { data: taskStepRows, error: eTaskSteps },
+    ] = await Promise.all([
+      sb.from('profiles').select('*').order('nombre'),
+      sb.from('clients').select('*').order('apellido'),
+      sb.from('policies').select('*'),
+      sb.from('quotes').select('*'),
+      sb.from('claims').select('*').order('fecha', { ascending: false }),
+      sb.from('documents').select('*').order('created_at', { ascending: false }),
+      sb.from('notes').select('*').order('created_at', { ascending: false }),
+      sb.from('task_lists').select('*').order('created_at'),
+      sb.from('tasks').select('*').order('created_at'),
+      sb.from('task_steps').select('*').order('created_at'),
+    ]);
+    const err = eProfiles || eClients || ePolicies || eQuotes || eClaims || eDocuments || eNotes || eTaskLists || eTasks || eTaskSteps;
+    if (err) { this.setState({ loadError: 'No se pudo sincronizar: ' + err.message, dataLoading: false }); return; }
+
+    const clients = (clientRows || []).map((c) => {
+      const bienes = Object.fromEntries(ASSET_TYPES.map((t) => [t.key, []]));
+      const bienesAnteriores = [];
+      (policyRows || []).filter((p) => p.client_id === c.id).forEach((p) => {
+        const asset = policyRowToAsset(p);
+        if (p.deleted_at) bienesAnteriores.push({ ...asset, typeKey: p.type_key, eliminadoEl: p.deleted_at.slice(0, 10) });
+        else bienes[p.type_key].push(asset);
+      });
+      const cotizacionesRiesgos = (quoteRows || []).filter((q) => q.client_id === c.id).map(quoteRowToClientQuote);
+      const siniestros = (claimRows || []).filter((s) => s.client_id === c.id)
+        .map((s) => ({ id: s.id, fecha: s.fecha, tipo: s.type_key, estado: s.estado, descripcion: s.descripcion }));
+      const documentos = (documentRows || []).filter((d) => d.client_id === c.id)
+        .map((d) => ({ id: d.id, nombre: d.nombre, tipo: d.tipo, fecha: fmtDate(d.fecha) }));
+      const notas = (noteRows || []).filter((n) => n.client_id === c.id)
+        .map((n) => ({ id: n.id, author: n.author_name, date: fmtDate((n.created_at || '').slice(0, 10)), text: n.text }));
+      return {
+        id: c.id, apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipo_documento, dni: c.dni,
+        condicionFiscal: c.condicion_fiscal, telefono: c.telefono, email: c.email,
+        fechaNacimiento: c.fecha_nacimiento || '', provincia: c.provincia, localidad: c.localidad,
+        codigoPostal: c.codigo_postal, direccion: c.direccion,
+        actualizado: fmtDate(((c.updated_at || c.created_at) || '').slice(0, 10)),
+        bienes, bienesAnteriores, cotizacionesRiesgos, siniestros, documentos, notas,
+      };
+    });
+
+    const cotizaciones = clients.flatMap((c) => c.cotizacionesRiesgos.map((q) => ({ ...q, clienteNombre: nombreCompleto(c) })));
+
+    const taskLists = (taskListRows || []).map((l) => ({
+      id: l.id, nombre: l.nombre,
+      tareas: (taskRows || []).filter((t) => t.task_list_id === l.id).map((t) => ({
+        id: t.id, texto: t.texto, hecha: t.hecha, recordatorio: t.recordatorio || '',
+        pasos: (taskStepRows || []).filter((p) => p.task_id === t.id).map((p) => ({ id: p.id, texto: p.texto, hecha: p.hecha })),
+        miDia: t.mi_dia, horaAviso: t.hora_aviso ? t.hora_aviso.slice(0, 5) : '', vence: t.vence || '', repetir: t.repetir,
+        asignadoA: t.asignado_a || '', archivo: t.archivo || '', nota: t.nota || '',
+      })),
+    }));
+
+    this.setState((prev) => ({
+      clients, cotizaciones, users: profileRows || [], taskLists,
+      activeTaskListId: taskLists.some((l) => l.id === prev.activeTaskListId) ? prev.activeTaskListId : (taskLists[0] ? taskLists[0].id : null),
+      dataLoading: false, loadError: '',
+    }));
+  };
+
+  currentProfile = () => {
+    const uid = this.state.session && this.state.session.user ? this.state.session.user.id : null;
+    return uid ? this.state.users.find((u) => u.id === uid) : null;
+  };
+  userById = (id) => this.state.users.find((u) => u.id === id);
+  currentTask = (taskId) => {
+    for (const l of this.state.taskLists) { const t = l.tareas.find((x) => x.id === taskId); if (t) return t; }
+    return null;
+  };
+  currentStep = (stepId) => {
+    for (const l of this.state.taskLists) for (const t of l.tareas) { const p = t.pasos.find((x) => x.id === stepId); if (p) return p; }
+    return null;
+  };
+
+  onAuthEmailChange = (e) => this.setState({ authEmail: e.target.value, authError: '' });
+  onAuthPasswordChange = (e) => this.setState({ authPassword: e.target.value, authError: '' });
+  onAuthKeyDown = (e) => { if (e.key === 'Enter') this.signIn(); };
+  signIn = async () => {
+    this.setState({ authError: '', authSubmitting: true });
+    const { error } = await sb.auth.signInWithPassword({ email: this.state.authEmail.trim(), password: this.state.authPassword });
+    if (error) this.setState({ authError: 'No pudimos iniciar sesión: ' + error.message, authSubmitting: false });
+    else this.setState({ authSubmitting: false, authPassword: '' });
+  };
+  signOut = async () => { await sb.auth.signOut(); this.setState({ view: 'dashboard', selectedClientId: null }); };
 
   stopProp = (e) => e.stopPropagation();
   goDashboard = () => this.setState({ view: 'dashboard', selectedClientId: null });
@@ -1291,46 +1453,47 @@ class Component extends DCLogic {
   goTasks = () => this.setState({ view: 'tasks' });
   selectTaskList = (id) => this.setState({ activeTaskListId: id });
   onNewTaskTextChange = (e) => this.setState({ newTaskText: e.target.value });
-  addTask = () => {
-    if (!this.state.newTaskText.trim()) return;
-    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
-      ? { ...l, tareas: [...l.tareas, { id: uid(), texto: this.state.newTaskText, hecha: false, recordatorio: '', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' }] } : l);
-    this.setState({ taskLists, newTaskText: '' });
+  addTask = async () => {
+    if (!this.state.newTaskText.trim() || !this.state.activeTaskListId) return;
+    await sb.from('tasks').insert({ task_list_id: this.state.activeTaskListId, texto: this.state.newTaskText });
+    this.setState({ newTaskText: '' });
+    await this.loadAll();
   };
   openTaskDetail = (taskId) => this.setState({ taskDetailOpen: true, taskDetailId: taskId, newStepText: '' });
   closeTaskDetail = () => this.setState({ taskDetailOpen: false });
-  updateTaskField = (field, value) => {
-    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
-      ? { ...l, tareas: l.tareas.map(t => t.id === this.state.taskDetailId ? { ...t, [field]: value } : t) } : l);
-    this.setState({ taskLists });
+  updateTaskField = async (field, value) => {
+    const column = { miDia: 'mi_dia', horaAviso: 'hora_aviso', vence: 'vence', repetir: 'repetir', asignadoA: 'asignado_a', archivo: 'archivo', nota: 'nota' }[field];
+    if (!column || !this.state.taskDetailId) return;
+    await sb.from('tasks').update({ [column]: value === '' ? null : value }).eq('id', this.state.taskDetailId);
+    await this.loadAll();
   };
   onNewStepTextChange = (e) => this.setState({ newStepText: e.target.value });
-  addStep = () => {
-    if (!this.state.newStepText.trim()) return;
-    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
-      ? { ...l, tareas: l.tareas.map(t => t.id === this.state.taskDetailId ? { ...t, pasos: [...t.pasos, { id: uid(), texto: this.state.newStepText, hecha: false }] } : t) } : l);
-    this.setState({ taskLists, newStepText: '' });
+  addStep = async () => {
+    if (!this.state.newStepText.trim() || !this.state.taskDetailId) return;
+    await sb.from('task_steps').insert({ task_id: this.state.taskDetailId, texto: this.state.newStepText });
+    this.setState({ newStepText: '' });
+    await this.loadAll();
   };
-  toggleStep = (stepId) => {
-    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
-      ? { ...l, tareas: l.tareas.map(t => t.id === this.state.taskDetailId ? { ...t, pasos: t.pasos.map(p => p.id === stepId ? { ...p, hecha: !p.hecha } : p) } : t) } : l);
-    this.setState({ taskLists });
+  toggleStep = async (stepId) => {
+    const p = this.currentStep(stepId);
+    await sb.from('task_steps').update({ hecha: p ? !p.hecha : true }).eq('id', stepId);
+    await this.loadAll();
   };
-  toggleTask = (taskId) => {
-    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
-      ? { ...l, tareas: l.tareas.map(t => t.id === taskId ? { ...t, hecha: !t.hecha } : t) } : l);
-    this.setState({ taskLists });
+  toggleTask = async (taskId) => {
+    const t = this.currentTask(taskId);
+    await sb.from('tasks').update({ hecha: t ? !t.hecha : true }).eq('id', taskId);
+    await this.loadAll();
   };
-  deleteTask = (taskId) => {
-    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
-      ? { ...l, tareas: l.tareas.filter(t => t.id !== taskId) } : l);
-    this.setState({ taskLists });
+  deleteTask = async (taskId) => {
+    await sb.from('tasks').delete().eq('id', taskId);
+    await this.loadAll();
   };
   onNewListNameChange = (e) => this.setState({ newListName: e.target.value });
-  addTaskList = () => {
+  addTaskList = async () => {
     if (!this.state.newListName.trim()) return;
-    const nl = { id: uid(), nombre: this.state.newListName, tareas: [] };
-    this.setState({ taskLists: [...this.state.taskLists, nl], newListName: '', activeTaskListId: nl.id });
+    const { data } = await sb.from('task_lists').insert({ nombre: this.state.newListName }).select().single();
+    this.setState({ newListName: '', activeTaskListId: data ? data.id : this.state.activeTaskListId });
+    await this.loadAll();
   };
   selectClient = (id, tab) => this.setState({ view: 'clientDetail', selectedClientId: id, activeTab: tab || 'resumen' });
 
@@ -1339,7 +1502,8 @@ class Component extends DCLogic {
   closeAllDialogs = () => ({ clientDialogOpen: false, showAssetModal: false, showSiniestroModal: false, showDocModal: false });
   openNewClientDialog = () => this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: null, clientForm: emptyClientForm() });
   openEditClientDialog = () => {
-    const c = this.state.clients.find(c => c.id === this.state.selectedClientId);
+    const c = this.state.clients.find((c) => c.id === this.state.selectedClientId);
+    if (!c) return;
     this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: c.id, clientForm: { apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipoDocumento || 'DNI', dni: c.dni, condicionFiscal: c.condicionFiscal || 'Consumidor Final', telefono: c.telefono, email: c.email, direccion: c.direccion, fechaNacimiento: c.fechaNacimiento || '', provincia: c.provincia || '', localidad: c.localidad || '', codigoPostal: c.codigoPostal || '' } });
   };
   closeClientDialog = () => this.setState({ clientDialogOpen: false });
@@ -1355,19 +1519,20 @@ class Component extends DCLogic {
   onClientFieldProvincia = (e) => this.setState({ clientForm: { ...this.state.clientForm, provincia: e.target.value } });
   onClientFieldLocalidad = (e) => this.setState({ clientForm: { ...this.state.clientForm, localidad: e.target.value } });
   onClientFieldCodigoPostal = (e) => this.setState({ clientForm: { ...this.state.clientForm, codigoPostal: e.target.value } });
-  saveClient = () => {
+  saveClient = async () => {
     const f = this.state.clientForm;
     if (!f.apellido || !f.nombre) return;
-    const today = TODAY.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    if (this.state.editingClientId) {
-      this.setState({
-        clients: this.state.clients.map(c => c.id === this.state.editingClientId ? { ...c, ...f, actualizado: today } : c),
-        clientDialogOpen: false,
-      });
-    } else {
-      const nc = { id: uid(), ...f, actualizado: today, bienes: Object.fromEntries(ASSET_TYPES.map(t => [t.key, []])), bienesAnteriores: [], cotizacionesRiesgos: [], siniestros: [], documentos: [], notas: [] };
-      this.setState({ clients: [...this.state.clients, nc], clientDialogOpen: false });
-    }
+    const row = {
+      apellido: f.apellido, nombre: f.nombre, tipo_documento: f.tipoDocumento, dni: f.dni,
+      condicion_fiscal: f.condicionFiscal, telefono: f.telefono, email: f.email,
+      fecha_nacimiento: f.fechaNacimiento || null, direccion: f.direccion,
+      provincia: f.provincia, localidad: f.localidad, codigo_postal: f.codigoPostal,
+      updated_at: new Date().toISOString(),
+    };
+    if (this.state.editingClientId) await sb.from('clients').update(row).eq('id', this.state.editingClientId);
+    else await sb.from('clients').insert(row);
+    this.setState({ clientDialogOpen: false });
+    await this.loadAll();
   };
 
   openNewAssetDialog = () => {
@@ -1389,19 +1554,22 @@ class Component extends DCLogic {
   };
   openEditAsset = (typeKey, asset) => {
     this.setState({ editingAssetId: asset.id, editingQuoteId: null });
-    this.setState({ assetForm: { ...asset } });
+    this.setState({ assetForm: { ...emptyAssetForm(), ...asset } });
     this.setState({ showAssetModal: true });
   };
   openEditQuote = (q) => {
-    const partes = (q.bien || '').split(' ');
-    this.setState({
-      activeTab: q.typeKey, editingAssetId: null, editingQuoteId: q.id,
-      assetForm: { ...emptyAssetForm(), aseguradora: q.aseguradora || '', fechaCotizacion: q.fecha || '',
+    const hasDetails = q.details && Object.keys(q.details).length > 0;
+    let f;
+    if (hasDetails) {
+      f = { ...emptyAssetForm(), ...q.details };
+    } else {
+      const partes = (q.bien || '').split(' ');
+      f = { ...emptyAssetForm(), aseguradora: q.aseguradora || '', fechaCotizacion: q.fecha || '',
         estadoCotizacion: q.estado || 'Cotizada', esNuestra: false,
         prima: q.costo ? Number(q.costo).toLocaleString('es-AR') : '',
-        tipoVehiculo: partes[0] || 'Auto', marca: partes[1] || '', modelo: partes.slice(2).join(' ') },
-      showAssetModal: true,
-    });
+        tipoVehiculo: partes[0] || 'Auto', marca: partes[1] || '', modelo: partes.slice(2).join(' ') };
+    }
+    this.setState({ activeTab: q.typeKey, editingAssetId: null, editingQuoteId: q.id, assetForm: f, showAssetModal: true });
   };
   closeAssetDialog = () => this.setState({ showAssetModal: false, editingQuoteId: null });
   onAssetFieldAseguradora = (e) => this.setState({ assetForm: { ...this.state.assetForm, aseguradora: e.target.value } });
@@ -1433,63 +1601,41 @@ class Component extends DCLogic {
     this.setState({ assetForm: { ...this.state.assetForm, [key]: formatted } });
   };
 
-  saveAsset = () => {
+  saveAsset = async () => {
     const typeKey = this.state.activeTab;
     const f = this.state.assetForm;
+    const clientId = this.state.selectedClientId;
+
     if (this.state.editingQuoteId) {
       const quoteId = this.state.editingQuoteId;
       if (f.esNuestra) {
-        const clients = this.state.clients.map(c => {
-          if (c.id !== this.state.selectedClientId) return c;
-          const bienes = { ...c.bienes, [typeKey]: [...(c.bienes[typeKey] || []), { ...f, id: uid() }] };
-          return { ...c, bienes, cotizacionesRiesgos: (c.cotizacionesRiesgos || []).filter(q => q.id !== quoteId) };
-        });
-        this.setState({ clients, showAssetModal: false, editingQuoteId: null });
-        return;
-      }
-      const clients = this.state.clients.map(c => {
-        if (c.id !== this.state.selectedClientId) return c;
-        const registro = { id: quoteId, typeKey, fecha: f.fechaCotizacion || TODAY.toISOString().slice(0, 10),
-          bien: [f.tipoVehiculo, f.marca, f.modelo].filter(Boolean).join(' '), aseguradora: f.aseguradora,
-          costo: Number((f.prima || f.sumaAsegurada || '0').toString().replace(/\D/g, '')) || 0, estado: f.estadoCotizacion };
-        return { ...c, cotizacionesRiesgos: c.cotizacionesRiesgos.map(q => q.id === quoteId ? registro : q) };
-      });
-      this.setState({ clients, showAssetModal: false, editingQuoteId: null });
-      return;
-    }
-    if (['auto', 'inmueble', 'negocio', 'consorcio'].includes(typeKey) && !this.state.editingAssetId && !f.esNuestra) {
-      const clients = this.state.clients.map(c => {
-        if (c.id !== this.state.selectedClientId) return c;
-        const registro = { id: uid(), typeKey, fecha: f.fechaCotizacion || TODAY.toISOString().slice(0, 10),
-          bien: [f.tipoVehiculo, f.marca, f.modelo].filter(Boolean).join(' '), aseguradora: f.aseguradora,
-          costo: Number((f.prima || f.sumaAsegurada || '0').toString().replace(/\D/g, '')) || 0, estado: f.estadoCotizacion };
-        return { ...c, cotizacionesRiesgos: [registro, ...(c.cotizacionesRiesgos || [])] };
-      });
-      this.setState({ clients, showAssetModal: false });
-      return;
-    }
-    const clients = this.state.clients.map(c => {
-      if (c.id !== this.state.selectedClientId) return c;
-      const list = c.bienes[typeKey] || [];
-      let newList;
-      if (this.state.editingAssetId) {
-        newList = list.map(a => a.id === this.state.editingAssetId ? { ...f, id: a.id } : a);
+        await sb.from('policies').insert(assetFormToPolicyRow(typeKey, clientId, f));
+        await sb.from('quotes').delete().eq('id', quoteId);
       } else {
-        newList = [...list, { ...f, id: uid() }];
+        await sb.from('quotes').update(quoteFormToRow(typeKey, clientId, f)).eq('id', quoteId);
       }
-      return { ...c, bienes: { ...c.bienes, [typeKey]: newList } };
-    });
-    this.setState({ clients, showAssetModal: false });
+      this.setState({ showAssetModal: false, editingQuoteId: null });
+      await this.loadAll();
+      return;
+    }
+
+    if (['auto', 'inmueble', 'negocio', 'consorcio'].includes(typeKey) && !this.state.editingAssetId && !f.esNuestra) {
+      await sb.from('quotes').insert(quoteFormToRow(typeKey, clientId, f));
+      this.setState({ showAssetModal: false });
+      await this.loadAll();
+      return;
+    }
+
+    const row = assetFormToPolicyRow(typeKey, clientId, f);
+    if (this.state.editingAssetId) await sb.from('policies').update({ ...row, updated_at: new Date().toISOString() }).eq('id', this.state.editingAssetId);
+    else await sb.from('policies').insert(row);
+    this.setState({ showAssetModal: false });
+    await this.loadAll();
   };
-  deleteAsset = (typeKey, assetId) => {
+  deleteAsset = async (typeKey, assetId) => {
     if (!window.confirm('¿Eliminar este bien? Se moverá a Bienes Anteriores.')) return;
-    const clients = this.state.clients.map(c => {
-      if (c.id !== this.state.selectedClientId) return c;
-      const removed = (c.bienes[typeKey] || []).find(a => a.id === assetId);
-      const bienesAnteriores = removed ? [...(c.bienesAnteriores || []), { ...removed, typeKey, eliminadoEl: TODAY.toISOString().slice(0, 10) }] : (c.bienesAnteriores || []);
-      return { ...c, bienes: { ...c.bienes, [typeKey]: (c.bienes[typeKey] || []).filter(a => a.id !== assetId) }, bienesAnteriores };
-    });
-    this.setState({ clients });
+    await sb.from('policies').update({ deleted_at: new Date().toISOString() }).eq('id', assetId);
+    await this.loadAll();
   };
 
   openNewSiniestroDialog = () => {
@@ -1501,15 +1647,16 @@ class Component extends DCLogic {
   onSiniestroFieldTipo = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, tipo: e.target.value } });
   onSiniestroFieldEstado = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, estado: e.target.value } });
   onSiniestroFieldDescripcion = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, descripcion: e.target.value } });
-  saveSiniestro = () => {
+  saveSiniestro = async () => {
     const f = this.state.siniestroForm;
     if (!f.fecha) return;
-    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, siniestros: [{ ...f, id: uid() }, ...c.siniestros] } : c);
-    this.setState({ clients, showSiniestroModal: false });
+    await sb.from('claims').insert({ client_id: this.state.selectedClientId, type_key: f.tipo, fecha: f.fecha, estado: f.estado, descripcion: f.descripcion });
+    this.setState({ showSiniestroModal: false });
+    await this.loadAll();
   };
-  deleteSiniestro = (id) => {
-    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, siniestros: c.siniestros.filter(s => s.id !== id) } : c);
-    this.setState({ clients });
+  deleteSiniestro = async (id) => {
+    await sb.from('claims').delete().eq('id', id);
+    await this.loadAll();
   };
 
   openNewDocDialog = () => {
@@ -1529,7 +1676,7 @@ class Component extends DCLogic {
   openCotizacionesModal = () => this.setState({ showCotizacionesModal: true });
   closeCotizacionesModal = () => this.setState({ showCotizacionesModal: false });
   goToClientQuote = (client, q) => {
-    const match = (client.cotizacionesRiesgos || []).find(cq => cq.bien === q.bien && cq.aseguradora === q.aseguradora && cq.fecha === q.fecha);
+    const match = (client.cotizacionesRiesgos || []).find((cq) => cq.bien === q.bien && cq.aseguradora === q.aseguradora && cq.fecha === q.fecha);
     this.setState({ showCotizacionesModal: false });
     if (match) { this.selectClient(client.id, 'cotizaciones'); this.openEditQuote(match); }
     else this.selectClient(client.id, 'cotizaciones');
@@ -1538,24 +1685,25 @@ class Component extends DCLogic {
   closeDocDialog = () => this.setState({ showDocModal: false });
   onDocFieldNombre = (e) => this.setState({ docForm: { ...this.state.docForm, nombre: e.target.value } });
   onDocFieldTipo = (e) => this.setState({ docForm: { ...this.state.docForm, tipo: e.target.value } });
-  saveDoc = () => {
+  saveDoc = async () => {
     const f = this.state.docForm;
     if (!f.nombre) return;
-    const fecha = TODAY.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, documentos: [{ ...f, id: uid(), fecha }, ...c.documentos] } : c);
-    this.setState({ clients, showDocModal: false });
+    await sb.from('documents').insert({ client_id: this.state.selectedClientId, nombre: f.nombre, tipo: f.tipo, fecha: new Date().toISOString().slice(0, 10) });
+    this.setState({ showDocModal: false });
+    await this.loadAll();
   };
-  deleteDoc = (id) => {
-    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, documentos: c.documentos.filter(d => d.id !== id) } : c);
-    this.setState({ clients });
+  deleteDoc = async (id) => {
+    await sb.from('documents').delete().eq('id', id);
+    await this.loadAll();
   };
 
   onNewNoteChange = (e) => this.setState({ newNote: e.target.value });
-  addNote = () => {
+  addNote = async () => {
     if (!this.state.newNote.trim()) return;
-    const date = TODAY.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, notas: [{ id: uid(), author: 'Usuario', date, text: this.state.newNote }, ...c.notas] } : c);
-    this.setState({ clients, newNote: '' });
+    const me = this.currentProfile();
+    await sb.from('notes').insert({ client_id: this.state.selectedClientId, author_id: me ? me.id : null, author_name: me ? me.nombre : 'Usuario', text: this.state.newNote });
+    this.setState({ newNote: '' });
+    await this.loadAll();
   };
 
   renderVals() {
@@ -1620,9 +1768,9 @@ class Component extends DCLogic {
       onToggle: () => this.toggleTask(t.id), onDelete: () => this.deleteTask(t.id), onOpen: () => this.openTaskDetail(t.id),
     })) : [];
     const taskDetail = activeTaskList ? activeTaskList.tareas.find(t => t.id === s.taskDetailId) : null;
-    const asignadoUser = taskDetail && taskDetail.asignadoA ? userById(taskDetail.asignadoA) : null;
+    const asignadoUser = taskDetail && taskDetail.asignadoA ? this.userById(taskDetail.asignadoA) : null;
     const taskDetailStepRows = taskDetail ? taskDetail.pasos.map(p => ({ id: p.id, texto: p.texto, hecha: p.hecha, textStyle: p.hecha ? 'text-decoration:line-through; opacity:0.55;' : '', onToggle: () => this.toggleStep(p.id) })) : [];
-    const userOptions = USERS.map(u => ({ id: u.id, nombre: u.nombre }));
+    const userOptions = s.users.map(u => ({ id: u.id, nombre: u.nombre }));
 
     const qSearch = s.quoteSearch.trim().toLowerCase();
     const quoteSearchResults = qSearch ? clients.filter(c =>
@@ -1726,7 +1874,19 @@ class Component extends DCLogic {
     const documentRows = selectedClient ? selectedClient.documentos.map(d => ({ ...d, onDelete: () => this.deleteDoc(d.id) })) : [];
     const noteRows = selectedClient ? selectedClient.notas : [];
 
+    const me = this.currentProfile();
+
     return {
+      showConfigMissing: !SUPABASE_CONFIGURED,
+      authLoading: SUPABASE_CONFIGURED && s.authLoading, showLogin: SUPABASE_CONFIGURED && !s.authLoading && !s.session, showApp: SUPABASE_CONFIGURED && !!s.session,
+      showAppLoading: !!s.session && s.dataLoading, showAppReady: !!s.session && !s.dataLoading,
+      authEmail: s.authEmail, authPassword: s.authPassword, authError: s.authError,
+      authSubmitting: s.authSubmitting, signInLabel: s.authSubmitting ? 'Ingresando…' : 'Ingresar',
+      onAuthEmailChange: this.onAuthEmailChange, onAuthPasswordChange: this.onAuthPasswordChange,
+      onAuthKeyDown: this.onAuthKeyDown, signIn: this.signIn, signOut: this.signOut,
+      currentUserName: (me && me.nombre) || (s.session && s.session.user ? s.session.user.email : ''),
+      loadError: s.loadError,
+
       isDashboard: s.view === 'dashboard', isClients: s.view === 'clients', isClientDetail: s.view === 'clientDetail' && !!selectedClient, isTasks: s.view === 'tasks',
       navDashboardBtnClass: 'btn ' + (s.view === 'dashboard' ? 'btn-primary' : 'btn-secondary'),
       navClientsBtnClass: 'btn ' + ((s.view === 'clients' || s.view === 'clientDetail') ? 'btn-primary' : 'btn-secondary'),
