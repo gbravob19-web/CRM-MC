@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM Broker Seguros - MC Asesores de Seguros</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+
+<helmet>
+  <link rel="stylesheet" href="./_ds/industry-c6ce59bb-199d-4796-96f0-a00e8f4789a4/styles.css">
+  <style>
+    body { margin: 0; }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent); }
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); display:flex; flex-direction:column;">
+
+  <div style="border-bottom:1px solid var(--color-divider); background:#ffffff; position:sticky; top:0; z-index:20;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); max-width:1280px; margin:0 auto; padding:var(--space-3) var(--space-6); box-sizing:border-box;">
+      <img src="./assets/mc-logo.png" alt="MC Asesores de Seguros" style="height:60px; width:auto; display:block;">
+      <nav style="display:flex; gap:var(--space-2);">
+        <button class="{{ navDashboardBtnClass }}" sc-camel-on-click="{{ goDashboard }}">Dashboard</button>
+        <button class="{{ navClientsBtnClass }}" sc-camel-on-click="{{ goClients }}">Clientes</button>
+        <button class="{{ navTasksBtnClass }}" sc-camel-on-click="{{ goTasks }}">Tareas</button>
+      </nav>
+    </div>
+  </div>
+
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1; padding:var(--space-8) var(--space-6); max-width:1280px; margin:0 auto; width:100%; box-sizing:border-box;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:var(--space-4); flex-wrap:wrap;">
+        <div>
+          <h1 style="margin-bottom:var(--space-1);">Dashboard</h1>
+          <p class="text-muted" style="margin-bottom:var(--space-6);">Panorama general de la cartera de clientes</p>
+        </div>
+        <button class="btn btn-primary" sc-camel-on-click="{{ openQuoteSearchDialog }}">+ Nueva Cotización</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); margin-bottom:var(--space-8);">
+        <div class="card blueprint elev-sm" style="cursor:pointer;" sc-camel-on-click="{{ goClients }}">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Clientes</div>
+          <div style="font-family:var(--font-heading); font-size:36px; font-weight:600;">{{ metrics.totalClientes }}</div>
+          <div class="card-meta">Total en cartera</div>
+        </div>
+        <div class="card blueprint elev-sm" style="cursor:pointer;" sc-camel-on-click="{{ openPolizasModal }}">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Pólizas</div>
+          <div style="font-family:var(--font-heading); font-size:36px; font-weight:600;">{{ metrics.polizasActivas }}</div>
+          <div class="card-meta">Vigentes o por vencer</div>
+        </div>
+        <div class="card blueprint elev-sm" style="cursor:pointer;" sc-camel-on-click="{{ openVencimientosModal }}">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Por vencer</div>
+          <div style="font-family:var(--font-heading); font-size:36px; font-weight:600;">{{ metrics.porVencer }}</div>
+          <div class="card-meta">Próximos 30 días</div>
+        </div>
+        <div class="card blueprint elev-sm" style="cursor:pointer;" sc-camel-on-click="{{ openSiniestrosModal }}">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="card-kicker">Siniestros</div>
+          <div style="font-family:var(--font-heading); font-size:36px; font-weight:600;">{{ metrics.siniestrosAbiertos }}</div>
+          <div class="card-meta">Abiertos o en proceso</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3);">
+        <h3 style="margin:0;">Próximos vencimientos</h3>
+        <button class="btn btn-secondary" sc-camel-on-click="{{ openVencimientosModal }}">Ver todos</button>
+      </div>
+      <div class="blueprint" style="padding:var(--space-3); margin-bottom:var(--space-8);">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Cliente</sc-raw-th><sc-raw-th>N° Póliza</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Vence</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ upcomingExpirations }}" as="row" hint-placeholder-count="4">
+              <sc-raw-tr style="cursor:pointer;" sc-camel-on-click="{{ row.onClick }}">
+                <sc-raw-td>{{ row.clienteNombre }}</sc-raw-td>
+                <sc-raw-td>{{ row.nPoliza }}</sc-raw-td>
+                <sc-raw-td>{{ row.aseguradora }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ row.vigenciaHasta }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;"><span class="tag {{ row.tagClass }}">{{ row.estado }}</span></sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+            <sc-if value="{{ noExpirations }}" hint-placeholder-val="{{ false }}">
+              <sc-raw-tr><sc-raw-td colspan="5" class="text-muted" style="padding:var(--space-4) var(--space-2);">No hay vencimientos próximos.</sc-raw-td></sc-raw-tr>
+            </sc-if>
+          </sc-raw-tbody>
+        </sc-raw-table>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3);">
+        <h3 style="margin:0;">Últimas cotizaciones</h3>
+        <button class="btn btn-secondary" sc-camel-on-click="{{ openCotizacionesModal }}">Ver todas</button>
+      </div>
+      <div class="blueprint" style="padding:var(--space-3);">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Cliente</sc-raw-th><sc-raw-th>Bien cotizado</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Mejor costo</sc-raw-th><sc-raw-th style="text-align:right;">Fecha de cotización</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ recentQuotes }}" as="q" hint-placeholder-count="4">
+              <sc-raw-tr>
+                <sc-raw-td>{{ q.clienteNombre }}</sc-raw-td>
+                <sc-raw-td>{{ q.bien }}</sc-raw-td>
+                <sc-raw-td>{{ q.aseguradora }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ q.costo }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ q.fecha }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;"><span class="tag {{ q.tagClass }}">{{ q.estado }}</span></sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+            <sc-if value="{{ noQuotes }}" hint-placeholder-val="{{ false }}">
+              <sc-raw-tr><sc-raw-td colspan="6" class="text-muted" style="padding:var(--space-4) var(--space-2);">No hay cotizaciones recientes.</sc-raw-td></sc-raw-tr>
+            </sc-if>
+          </sc-raw-tbody>
+        </sc-raw-table>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; max-width:1280px; margin:0 auto; width:100%;">
+      <div style="width:240px; border-right:1px solid var(--color-divider); padding:var(--space-6) var(--space-3); display:flex; flex-direction:column; gap:var(--space-1);">
+        <h3 style="margin:0 0 var(--space-3) var(--space-2);">Tareas</h3>
+        <sc-for list="{{ taskListRows }}" as="tl" hint-placeholder-count="2">
+          <button class="{{ tl.btnClass }} btn-block" style="justify-content:space-between; display:flex;" sc-camel-on-click="{{ tl.onClick }}">
+            <span>{{ tl.nombre }}</span><span class="text-muted">{{ tl.pendientes }}</span>
+          </button>
+        </sc-for>
+        <div class="field" style="margin-top:var(--space-4);">
+          <input class="input" type="text" placeholder="Nueva lista…" value="{{ newListName }}" sc-camel-on-change="{{ onNewListNameChange }}">
+        </div>
+        <button class="btn btn-secondary" sc-camel-on-click="{{ addTaskList }}">+ Agregar lista</button>
+      </div>
+      <div style="flex:1; padding:var(--space-8) var(--space-6);">
+        <h1 style="margin-bottom:var(--space-5);">{{ activeTaskListName }}</h1>
+        <div style="display:flex; gap:var(--space-2); margin-bottom:var(--space-5);">
+          <input class="input" type="text" placeholder="Agregar una tarea o recordatorio…" value="{{ newTaskText }}" sc-camel-on-change="{{ onNewTaskTextChange }}" style="flex:1;">
+          <button class="btn btn-primary" sc-camel-on-click="{{ addTask }}">Agregar</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:var(--space-2);">
+          <sc-for list="{{ taskRows }}" as="t" hint-placeholder-count="3">
+            <div class="card blueprint" style="flex-direction:row; align-items:center; gap:var(--space-3); padding:var(--space-3);">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <input type="checkbox" checked="{{ t.hecha }}" sc-camel-on-change="{{ t.onToggle }}" style="width:18px; height:18px;">
+              <div style="flex:1; cursor:pointer;" sc-camel-on-click="{{ t.onOpen }}">
+                <div style="{{ t.textStyle }}">{{ t.texto }}</div>
+                <sc-if value="{{ t.recordatorio }}" hint-placeholder-val="{{ false }}">
+                  <div class="card-meta">Recordatorio: {{ t.recordatorio }}</div>
+                </sc-if>
+              </div>
+              <button class="btn btn-ghost" sc-camel-on-click="{{ t.onDelete }}">Eliminar</button>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noTasks }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="text-align:center; padding:var(--space-8) 0;">Sin tareas en esta lista.</p>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ taskDetailOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeTaskDetail }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-height:88vh; overflow:auto;">
+        <div class="dialog-title">{{ taskDetail.texto }}</div>
+
+        <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom:var(--space-4);">
+          <sc-for list="{{ taskDetailStepRows }}" as="p" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; gap:var(--space-2);">
+              <input type="checkbox" checked="{{ p.hecha }}" sc-camel-on-change="{{ p.onToggle }}">
+              <span style="{{ p.textStyle }}">{{ p.texto }}</span>
+            </div>
+          </sc-for>
+          <div style="display:flex; gap:var(--space-2);">
+            <input class="input" type="text" placeholder="Agregar paso" value="{{ newStepText }}" sc-camel-on-change="{{ onNewStepTextChange }}" style="flex:1;">
+            <button class="btn btn-secondary" sc-camel-on-click="{{ addStep }}">+</button>
+          </div>
+        </div>
+
+        <div class="field" style="flex-direction:row; align-items:center; gap:var(--space-2);">
+          <input type="checkbox" checked="{{ taskDetail.miDia }}" sc-camel-on-change="{{ onTaskMiDia }}">
+          <label style="margin:0;">Agregar a Mi día</label>
+        </div>
+
+        <div class="field"><label>Avísame a las</label><input class="input" type="time" value="{{ taskDetail.horaAviso }}" sc-camel-on-change="{{ onTaskHoraAviso }}"></div>
+        <div class="field"><label>Vence el</label><input class="input" type="date" value="{{ taskDetail.vence }}" sc-camel-on-change="{{ onTaskVence }}"></div>
+        <div class="field" style="flex-direction:row; align-items:center; gap:var(--space-2);">
+          <input type="checkbox" checked="{{ taskDetail.repetir }}" sc-camel-on-change="{{ onTaskRepetir }}">
+          <label style="margin:0;">Repetir</label>
+        </div>
+
+        <div class="field">
+          <label>Asignar a</label>
+          <sc-raw-select class="input" value="{{ taskDetail.asignadoA }}" sc-camel-on-change="{{ onTaskAsignado }}">
+            <option value="">Sin asignar</option>
+            <sc-for list="{{ userOptions }}" as="u" hint-placeholder-count="4">
+              <option value="{{ u.id }}">{{ u.nombre }}</option>
+            </sc-for>
+          </sc-raw-select>
+        </div>
+
+        <div class="field"><label>Agregar archivo</label><input class="input" type="text" placeholder="Nombre del archivo…" value="{{ taskDetail.archivo }}" sc-camel-on-change="{{ onTaskArchivo }}"></div>
+        <div class="field"><label>Agregar nota</label><textarea class="input" value="{{ taskDetail.nota }}" sc-camel-on-change="{{ onTaskNota }}"></textarea></div>
+
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeTaskDetail }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-primary" sc-camel-on-click="{{ closeTaskDetail }}">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showAssetModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeAssetDialog }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="max-height:88vh; overflow:auto; background:var(--color-bg); box-shadow:var(--shadow-lg);">
+        <div class="dialog-title">{{ assetDialogTitle }}</div>
+
+        <sc-if value="{{ isAutoTab }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+            <div class="field">
+              <label>Operación</label>
+              <sc-raw-select class="input" value="{{ assetForm.operacion }}" sc-camel-on-change="{{ onAssetFieldOperacion }}">
+                <option value="Nuevo">Nuevo</option>
+                <option value="Recotización">Recotización</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Tipo de Vehículo</label>
+              <sc-raw-select class="input" value="{{ assetForm.tipoVehiculo }}" sc-camel-on-change="{{ onAssetFieldTipoVehiculo }}">
+                <option value="Auto">Auto</option>
+                <option value="Moto">Moto</option>
+                <option value="Cuatriciclo">Cuatriciclo</option>
+                <option value="Camión">Camión</option>
+                <option value="Acoplado">Acoplado</option>
+                <option value="Otro">Otro</option>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>Marca</label><input class="input" type="text" value="{{ assetForm.marca }}" sc-camel-on-change="{{ onAssetFieldMarca }}"></div>
+            <div class="field"><label>Modelo</label><input class="input" type="text" value="{{ assetForm.modelo }}" sc-camel-on-change="{{ onAssetFieldModelo }}"></div>
+            <div class="field"><label>Año</label><input class="input" type="number" value="{{ assetForm.anio }}" sc-camel-on-change="{{ onAssetFieldAnio }}"></div>
+            <div class="field"><label>Patente</label><input class="input" type="text" value="{{ assetForm.patente }}" sc-camel-on-change="{{ onAssetFieldPatente }}"></div>
+            <div class="field"><label>N° Chasis</label><input class="input" type="text" value="{{ assetForm.nChasis }}" sc-camel-on-change="{{ onAssetFieldNChasis }}"></div>
+            <div class="field"><label>N° Motor</label><input class="input" type="text" value="{{ assetForm.nMotor }}" sc-camel-on-change="{{ onAssetFieldNMotor }}"></div>
+            <div class="field"><label>Fecha de cotización</label><input class="input" type="date" value="{{ assetForm.fechaCotizacion }}" sc-camel-on-change="{{ onAssetFieldFechaCotizacion }}"></div>
+            <div class="field">
+              <label>Estado</label>
+              <sc-raw-select class="input" value="{{ assetForm.estadoCotizacion }}" sc-camel-on-change="{{ onAssetFieldEstadoCotizacion }}">
+                <option value="Cotizada">Cotizada</option>
+                <option value="Enviada">Enviada</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Aprobada">Aprobada</option>
+                <option value="Rechazada">Rechazada</option>
+              </sc-raw-select>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:var(--space-2); margin:var(--space-4) 0 var(--space-3);">
+            <input type="checkbox" checked="{{ assetForm.esNuestra }}" sc-camel-on-change="{{ onAssetFieldEsNuestra }}">
+            <h4 style="margin:0;">Póliza Vigente</h4>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+            <div class="field">
+              <label>Aseguradora</label>
+              <sc-raw-select class="input" value="{{ assetForm.aseguradora }}" sc-camel-on-change="{{ onAssetFieldAseguradora }}">
+                <option value="">Seleccionar...</option>
+                <sc-for list="{{ aseguradoraOptions }}" as="a" hint-placeholder-count="16">
+                  <option value="{{ a }}">{{ a }}</option>
+                </sc-for>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>N° de póliza</label><input class="input" type="text" value="{{ assetForm.nPoliza }}" sc-camel-on-change="{{ onAssetFieldNPoliza }}"></div>
+            <div class="field">
+              <label>Cobertura Contratada</label>
+              <sc-raw-select class="input" value="{{ assetForm.coberturaContratada }}" sc-camel-on-change="{{ onAssetFieldCoberturaContratada }}">
+                <option value="Resp. Civil">Resp. Civil</option>
+                <option value="B - Totales Full">B - Totales Full</option>
+                <option value="B1 - Totales Base">B1 - Totales Base</option>
+                <option value="C - Completos Base">C - Completos Base</option>
+                <option value="CF - Completos Full">CF - Completos Full</option>
+                <option value="TR - Todo Riesgo">TR - Todo Riesgo</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Franquicia</label>
+              <sc-raw-select class="input" value="{{ assetForm.franquicia }}" sc-camel-on-change="{{ onAssetFieldFranquicia }}">
+                <option value="N/A">N/A</option>
+                <option value="1%">1%</option>
+                <option value="2%">2%</option>
+                <option value="2,5%">2,5%</option>
+                <option value="3%">3%</option>
+                <option value="3,5%">3,5%</option>
+                <option value="4%">4%</option>
+                <option value="5%">5%</option>
+                <option value="6%">6%</option>
+                <option value="8%">8%</option>
+                <option value="10%">10%</option>
+                <option value="Fija">Fija</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Suma asegurada</label>
+              <div style="display:flex; align-items:center; gap:var(--space-2);">
+                <sc-raw-select class="input" value="{{ assetForm.monedaSuma }}" sc-camel-on-change="{{ onAssetFieldMonedaSuma }}" style="width:80px; flex:none;">
+                  <option value="$">$</option>
+                  <option value="USD">USD</option>
+                </sc-raw-select>
+                <input class="input" type="text" inputmode="numeric" value="{{ assetForm.sumaAsegurada }}" sc-camel-on-change="{{ onAssetFieldSumaAsegurada }}" style="flex:1;">
+              </div>
+            </div>
+            <div class="field">
+              <label>Premio</label>
+              <div style="display:flex; align-items:center; gap:var(--space-2);">
+                <sc-raw-select class="input" value="{{ assetForm.monedaPrima }}" sc-camel-on-change="{{ onAssetFieldMonedaPrima }}" style="width:80px; flex:none;">
+                  <option value="$">$</option>
+                  <option value="USD">USD</option>
+                </sc-raw-select>
+                <input class="input" type="text" inputmode="numeric" value="{{ assetForm.prima }}" sc-camel-on-change="{{ onAssetFieldPrima }}" style="flex:1;">
+              </div>
+            </div>
+            <div class="field"><label>Vigencia desde</label><input class="input" type="date" value="{{ assetForm.vigenciaDesde }}" sc-camel-on-change="{{ onAssetFieldVigenciaDesde }}"></div>
+            <div class="field"><label>Vigencia hasta</label><input class="input" type="date" value="{{ assetForm.vigenciaHasta }}" sc-camel-on-change="{{ onAssetFieldVigenciaHasta }}"></div>
+            <div class="field">
+              <label>Forma de pago</label>
+              <sc-raw-select class="input" value="{{ assetForm.formaPago }}" sc-camel-on-change="{{ onAssetFieldFormaPago }}">
+                <option value="Efectivo">Efectivo</option>
+                <option value="CBU">CBU</option>
+                <option value="Tarjeta">Tarjeta</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Vencimientos Pagos</label>
+              <div style="display:flex; align-items:center; gap:var(--space-2);">
+                <sc-raw-select class="input" value="{{ assetForm.vencimientoPagoDia }}" sc-camel-on-change="{{ onAssetFieldVencimientoPagoDia }}">
+                  <sc-for list="{{ diaOptions }}" as="d" hint-placeholder-count="31">
+                    <option value="{{ d }}">{{ d }}</option>
+                  </sc-for>
+                </sc-raw-select>
+                <span class="text-muted">de cada mes</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isInmuebleTab }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+            <div class="field">
+              <label>Operación</label>
+              <sc-raw-select class="input" value="{{ assetForm.operacion }}" sc-camel-on-change="{{ onAssetFieldOperacion }}">
+                <option value="Nuevo">Nuevo</option>
+                <option value="Recotización">Recotización</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Tipo de Inmueble</label>
+              <sc-raw-select class="input" value="{{ assetForm.tipoInmueble }}" sc-camel-on-change="{{ onAssetFieldTipoInmueble }}">
+                <sc-if value="{{ isNegocioTab }}" hint-placeholder-val="{{ false }}">
+                  <option value="Local con venta al público">Local con venta al público</option>
+                  <option value="Local sin venta al público">Local sin venta al público</option>
+                  <option value="Depósito">Depósito</option>
+                  <option value="Fábrica">Fábrica</option>
+                </sc-if>
+                <sc-if value="{{ isConsorcioTab }}" hint-placeholder-val="{{ false }}">
+                  <option value="Edificio">Edificio</option>
+                  <option value="Edificio con local">Edificio con local</option>
+                  <option value="Edificio con estacionamiento">Edificio con estacionamiento</option>
+                  <option value="Edificio con local y estacionamiento">Edificio con local y estacionamiento</option>
+                </sc-if>
+                <sc-if value="{{ isInmuebleTabPlain }}" hint-placeholder-val="{{ true }}">
+                  <option value="Casa">Casa</option>
+                  <option value="Casa en Country">Casa en Country</option>
+                  <option value="Departamento PB y 1er Piso">Departamento PB y 1er Piso</option>
+                  <option value="Departamento 2do Piso y Superior">Departamento 2do Piso y Superior</option>
+                  <option value="Local">Local</option>
+                  <option value="Depósito">Depósito</option>
+                </sc-if>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>Dirección</label><input class="input" type="text" value="{{ assetForm.direccion }}" sc-camel-on-change="{{ onAssetFieldDireccion }}"></div>
+            <div class="field">
+              <label>Provincia</label>
+              <sc-raw-select class="input" value="{{ assetForm.provincia }}" sc-camel-on-change="{{ onAssetFieldProvincia }}">
+                <sc-for list="{{ provinciaOptions }}" as="p" hint-placeholder-count="24">
+                  <option value="{{ p }}">{{ p }}</option>
+                </sc-for>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>Localidad</label><input class="input" type="text" value="{{ assetForm.localidad }}" sc-camel-on-change="{{ onAssetFieldLocalidad }}"></div>
+            <div class="field"><label>Código Postal</label><input class="input" type="text" value="{{ assetForm.codigoPostal }}" sc-camel-on-change="{{ onAssetFieldCodigoPostal }}"></div>
+            <div class="field"><label>Metros Cuadrados</label><input class="input" type="number" value="{{ assetForm.m2 }}" sc-camel-on-change="{{ onAssetFieldM2 }}"></div>
+            <div class="field"><label>Valor Learisk (<a href="https://www.learisk.com/calculador" target="_blank" rel="noopener">Calculador</a>)</label><input class="input" type="text" inputmode="numeric" value="{{ assetForm.valorLearisk }}" sc-camel-on-change="{{ onAssetFieldValorLearisk }}"></div>
+            <sc-if value="{{ isConsorcioTab }}" hint-placeholder-val="{{ false }}">
+              <div class="field"><label>Cantidad de Pisos</label><input class="input" type="number" value="{{ assetForm.cantPisos }}" sc-camel-on-change="{{ onAssetFieldCantPisos }}"></div>
+              <div class="field"><label>Cantidad de UF</label><input class="input" type="number" value="{{ assetForm.cantUF }}" sc-camel-on-change="{{ onAssetFieldCantUF }}"></div>
+              <div class="field"><label>Cantidad Elevadores</label><input class="input" type="number" value="{{ assetForm.cantAscensores }}" sc-camel-on-change="{{ onAssetFieldCantAscensores }}"></div>
+              <div class="field"><label>Cantidad de Termotanques/Calderas</label><input class="input" type="number" value="{{ assetForm.cantTermotanques }}" sc-camel-on-change="{{ onAssetFieldCantTermotanques }}"></div>
+              <div class="field"><label>Cantidad de Locales</label><input class="input" type="number" value="{{ assetForm.cantLocales }}" sc-camel-on-change="{{ onAssetFieldCantLocales }}"></div>
+              <div class="field"><label>Cantidad de Estacionamientos</label><input class="input" type="number" value="{{ assetForm.cantEstacionamientos }}" sc-camel-on-change="{{ onAssetFieldCantEstacionamientos }}"></div>
+            </sc-if>
+            <div class="field"><label>Fecha de cotización</label><input class="input" type="date" value="{{ assetForm.fechaCotizacion }}" sc-camel-on-change="{{ onAssetFieldFechaCotizacion }}"></div>
+            <div class="field">
+              <label>Estado</label>
+              <sc-raw-select class="input" value="{{ assetForm.estadoCotizacion }}" sc-camel-on-change="{{ onAssetFieldEstadoCotizacion }}">
+                <option value="Cotizada">Cotizada</option>
+                <option value="Enviada">Enviada</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Aprobada">Aprobada</option>
+                <option value="Rechazada">Rechazada</option>
+              </sc-raw-select>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:var(--space-2); margin:var(--space-4) 0 var(--space-3);">
+            <input type="checkbox" checked="{{ assetForm.esNuestra }}" sc-camel-on-change="{{ onAssetFieldEsNuestra }}">
+            <h4 style="margin:0;">Póliza Vigente</h4>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+            <div class="field">
+              <label>Aseguradora</label>
+              <sc-raw-select class="input" value="{{ assetForm.aseguradora }}" sc-camel-on-change="{{ onAssetFieldAseguradora }}">
+                <option value="">Seleccionar...</option>
+                <sc-for list="{{ aseguradoraOptions }}" as="a" hint-placeholder-count="16">
+                  <option value="{{ a }}">{{ a }}</option>
+                </sc-for>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>N° de póliza</label><input class="input" type="text" value="{{ assetForm.nPoliza }}" sc-camel-on-change="{{ onAssetFieldNPoliza }}"></div>
+            <div class="field">
+              <label>Cobertura Contratada</label>
+              <sc-raw-select class="input" value="{{ assetForm.coberturaContratada }}" sc-camel-on-change="{{ onAssetFieldCoberturaContratada }}">
+                <sc-if value="{{ isConsorcioTab }}" hint-placeholder-val="{{ false }}">
+                  <option value="Integral de Consorcio">Integral de Consorcio</option>
+                </sc-if>
+                <sc-if value="{{ isConsorcioTabInverse }}" hint-placeholder-val="{{ true }}">
+                  <option value="Incendio">Incendio</option>
+                  <sc-if value="{{ isNegocioTab }}" hint-placeholder-val="{{ false }}">
+                    <option value="Integral de comercio">Integral de comercio</option>
+                  </sc-if>
+                  <sc-if value="{{ isNegocioTabInverse }}" hint-placeholder-val="{{ true }}">
+                    <option value="Hogar">Hogar</option>
+                  </sc-if>
+                </sc-if>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Tipo de Cobertura</label>
+              <sc-raw-select class="input" value="{{ assetForm.tipoCobertura }}" sc-camel-on-change="{{ onAssetFieldTipoCobertura }}">
+                <option value="Prorrata">Prorrata</option>
+                <option value="Primer Riesgo Absoluto">Primer Riesgo Absoluto</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Suma asegurada</label>
+              <div style="display:flex; align-items:center; gap:var(--space-2);">
+                <sc-raw-select class="input" value="{{ assetForm.monedaSuma }}" sc-camel-on-change="{{ onAssetFieldMonedaSuma }}" style="width:80px; flex:none;">
+                  <option value="$">$</option>
+                  <option value="USD">USD</option>
+                </sc-raw-select>
+                <input class="input" type="text" inputmode="numeric" value="{{ assetForm.sumaAsegurada }}" sc-camel-on-change="{{ onAssetFieldSumaAsegurada }}" style="flex:1;">
+              </div>
+            </div>
+            <div class="field">
+              <label>Premio</label>
+              <div style="display:flex; align-items:center; gap:var(--space-2);">
+                <sc-raw-select class="input" value="{{ assetForm.monedaPrima }}" sc-camel-on-change="{{ onAssetFieldMonedaPrima }}" style="width:80px; flex:none;">
+                  <option value="$">$</option>
+                  <option value="USD">USD</option>
+                </sc-raw-select>
+                <input class="input" type="text" inputmode="numeric" value="{{ assetForm.prima }}" sc-camel-on-change="{{ onAssetFieldPrima }}" style="flex:1;">
+              </div>
+            </div>
+            <div class="field"><label>Vigencia desde</label><input class="input" type="date" value="{{ assetForm.vigenciaDesde }}" sc-camel-on-change="{{ onAssetFieldVigenciaDesde }}"></div>
+            <div class="field"><label>Vigencia hasta</label><input class="input" type="date" value="{{ assetForm.vigenciaHasta }}" sc-camel-on-change="{{ onAssetFieldVigenciaHasta }}"></div>
+            <div class="field">
+              <label>Forma de pago</label>
+              <sc-raw-select class="input" value="{{ assetForm.formaPago }}" sc-camel-on-change="{{ onAssetFieldFormaPago }}">
+                <option value="Efectivo">Efectivo</option>
+                <option value="CBU">CBU</option>
+                <option value="Tarjeta">Tarjeta</option>
+              </sc-raw-select>
+            </div>
+            <div class="field">
+              <label>Vencimientos Pagos</label>
+              <div style="display:flex; align-items:center; gap:var(--space-2);">
+                <sc-raw-select class="input" value="{{ assetForm.vencimientoPagoDia }}" sc-camel-on-change="{{ onAssetFieldVencimientoPagoDia }}">
+                  <sc-for list="{{ diaOptions }}" as="d" hint-placeholder-count="31">
+                    <option value="{{ d }}">{{ d }}</option>
+                  </sc-for>
+                </sc-raw-select>
+                <span class="text-muted">de cada mes</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isNonAutoAssetTab }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+            <div class="field">
+              <label>Aseguradora</label>
+              <sc-raw-select class="input" value="{{ assetForm.aseguradora }}" sc-camel-on-change="{{ onAssetFieldAseguradora }}">
+                <option value="">Seleccionar...</option>
+                <sc-for list="{{ aseguradoraOptions }}" as="a" hint-placeholder-count="16">
+                  <option value="{{ a }}">{{ a }}</option>
+                </sc-for>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>N° de póliza</label><input class="input" type="text" value="{{ assetForm.nPoliza }}" sc-camel-on-change="{{ onAssetFieldNPoliza }}"></div>
+            <div class="field"><label>Suma asegurada</label><input class="input" type="number" value="{{ assetForm.sumaAsegurada }}" sc-camel-on-change="{{ onAssetFieldSumaAsegurada }}"></div>
+            <div class="field"><label>Prima</label><input class="input" type="number" value="{{ assetForm.prima }}" sc-camel-on-change="{{ onAssetFieldPrima }}"></div>
+            <div class="field"><label>Vigencia desde</label><input class="input" type="date" value="{{ assetForm.vigenciaDesde }}" sc-camel-on-change="{{ onAssetFieldVigenciaDesde }}"></div>
+            <div class="field"><label>Vigencia hasta</label><input class="input" type="date" value="{{ assetForm.vigenciaHasta }}" sc-camel-on-change="{{ onAssetFieldVigenciaHasta }}"></div>
+            <sc-for list="{{ extraFieldsForForm }}" as="ef" hint-placeholder-count="2">
+              <div class="field"><label>{{ ef.label }}</label><input class="input" type="{{ ef.inputType }}" value="{{ ef.value }}" sc-camel-on-change="{{ ef.onChange }}"></div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeAssetDialog }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeAssetDialog }}">Cancelar</button>
+          <button class="btn btn-primary" sc-camel-on-click="{{ saveAsset }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showSiniestroModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeSiniestroDialog }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg);">
+        <div class="dialog-title">Registrar siniestro</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+          <div class="field"><label>Fecha</label><input class="input" type="date" value="{{ siniestroForm.fecha }}" sc-camel-on-change="{{ onSiniestroFieldFecha }}"></div>
+          <div class="field">
+            <label>Bien relacionado</label>
+            <sc-raw-select class="input" value="{{ siniestroForm.tipo }}" sc-camel-on-change="{{ onSiniestroFieldTipo }}">
+              <sc-for list="{{ siniestroTipoOptions }}" as="o" hint-placeholder-count="6">
+                <option value="{{ o.value }}">{{ o.label }}</option>
+              </sc-for>
+            </sc-raw-select>
+          </div>
+          <div class="field">
+            <label>Estado</label>
+            <sc-raw-select class="input" value="{{ siniestroForm.estado }}" sc-camel-on-change="{{ onSiniestroFieldEstado }}">
+              <option value="Abierto">Abierto</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Cerrado">Cerrado</option>
+            </sc-raw-select>
+          </div>
+        </div>
+        <div class="field"><label>Descripción</label><textarea class="input" value="{{ siniestroForm.descripcion }}" sc-camel-on-change="{{ onSiniestroFieldDescripcion }}"></textarea></div>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeSiniestroDialog }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeSiniestroDialog }}">Cancelar</button>
+          <button class="btn btn-primary" sc-camel-on-click="{{ saveSiniestro }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showDocModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeDocDialog }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg);">
+        <div class="dialog-title">Agregar documento</div>
+        <div class="field"><label>Nombre</label><input class="input" type="text" value="{{ docForm.nombre }}" sc-camel-on-change="{{ onDocFieldNombre }}"></div>
+        <div class="field"><label>Tipo</label><input class="input" type="text" placeholder="Ej: DNI, Póliza, Foto del bien" value="{{ docForm.tipo }}" sc-camel-on-change="{{ onDocFieldTipo }}"></div>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeDocDialog }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeDocDialog }}">Cancelar</button>
+          <button class="btn btn-primary" sc-camel-on-click="{{ saveDoc }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showQuoteTypeModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeQuoteTypeModal }}" style="z-index:1000;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); position:relative; z-index:1001;">
+        <div class="dialog-title">¿Qué tipo de riesgo desea cotizar?</div>
+        <div class="field">
+          <label>Ramo</label>
+          <sc-raw-select class="input" value="{{ quoteTypeChoice }}" sc-camel-on-change="{{ onQuoteTypeChoiceChange }}">
+            <sc-for list="{{ riskTypeOptions }}" as="rt" hint-placeholder-count="8">
+              <option value="{{ rt.key }}">{{ rt.label }}</option>
+            </sc-for>
+          </sc-raw-select>
+        </div>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeQuoteTypeModal }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeQuoteTypeModal }}">Cancelar</button>
+          <button class="btn btn-primary" sc-camel-on-click="{{ continueToQuoteForm }}">Continuar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isClients }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; padding:var(--space-8) var(--space-6); max-width:1280px; margin:0 auto; width:100%; box-sizing:border-box;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); margin-bottom:var(--space-6); flex-wrap:wrap;">
+        <div>
+          <h1 style="margin-bottom:var(--space-1);">Clientes</h1>
+          <p class="text-muted" style="margin:0;">{{ filteredClientsCount }} resultados</p>
+        </div>
+        <button class="btn btn-primary" sc-camel-on-click="{{ openNewClientDialog }}">+ Nuevo cliente</button>
+      </div>
+
+      <div class="field" style="max-width:360px; margin-bottom:var(--space-4);">
+        <label>Buscar</label>
+        <input class="input" type="text" placeholder="Nombre o DNI…" value="{{ search }}" sc-camel-on-change="{{ onSearchChange }}">
+      </div>
+
+      <div class="blueprint" style="padding:var(--space-3);">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Nombre</sc-raw-th><sc-raw-th>DNI</sc-raw-th><sc-raw-th>Contacto</sc-raw-th><sc-raw-th style="text-align:center;">Bienes</sc-raw-th><sc-raw-th style="text-align:center;">Pólizas activas</sc-raw-th><sc-raw-th style="text-align:right;">Actualizado</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ clientRows }}" as="c" hint-placeholder-count="5">
+              <sc-raw-tr style="cursor:pointer;" sc-camel-on-click="{{ c.onClick }}">
+                <sc-raw-td>{{ c.nombre }}</sc-raw-td>
+                <sc-raw-td>{{ c.dni }}</sc-raw-td>
+                <sc-raw-td>{{ c.contacto }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;">{{ c.bienesCount }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;">{{ c.polizasActivas }}</sc-raw-td>
+                <sc-raw-td class="text-muted" style="text-align:right;">{{ c.actualizado }}</sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+          </sc-raw-tbody>
+        </sc-raw-table>
+        <sc-if value="{{ noClients }}" hint-placeholder-val="{{ false }}">
+          <div class="text-muted" style="padding:var(--space-6); text-align:center;">Sin resultados para esa búsqueda.</div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isClientDetail }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; padding:var(--space-8) var(--space-6); max-width:1280px; margin:0 auto; width:100%; box-sizing:border-box;">
+      <a href="#" sc-camel-on-click="{{ goClients }}" class="text-muted" style="display:inline-block; margin-bottom:var(--space-4); font-size:13px;">← Volver a clientes</a>
+
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-6);">
+        <div>
+          <h1 style="margin-bottom:var(--space-1);">{{ selectedClient.nombre }}</h1>
+          <p class="text-muted" style="margin:0;">{{ selectedClient.tipoDocumento }} {{ selectedClient.dni }} · {{ selectedClient.condicionFiscal }}</p>
+          <p class="text-muted" style="margin:4px 0 0;">Teléfono: {{ selectedClient.telefono }} · Email: {{ selectedClient.email }}</p>
+          <p class="text-muted" style="margin:4px 0 0;">{{ selectedClient.direccionCompleta }}</p>
+        </div>
+        <button class="btn btn-secondary" sc-camel-on-click="{{ openEditClientDialog }}">Editar datos</button>
+      </div>
+
+      <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-6); border-bottom:1px solid var(--color-divider); padding-bottom:var(--space-3);">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="12">
+          <button class="{{ t.btnClass }}" sc-camel-on-click="{{ t.onClick }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isResumenTab }}" hint-placeholder-val="{{ true }}">
+        <h3 style="margin-bottom:var(--space-3);">Riesgos vigentes</h3>
+        <div class="blueprint" style="padding:var(--space-3); margin-bottom:var(--space-8);">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-raw-table class="table" style="table-layout:fixed;">
+            
+            <sc-raw-thead><sc-raw-tr><sc-raw-th>Bien</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th>N° póliza</sc-raw-th><sc-raw-th style="text-align:right;">Vence</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{ clientRiesgosVigentes }}" as="rv" hint-placeholder-count="3">
+                <sc-raw-tr sc-camel-on-click="{{ rv.onClick }}" style="cursor:pointer;">
+                  <sc-raw-td>{{ rv.tipoLabel }}</sc-raw-td>
+                  <sc-raw-td>{{ rv.aseguradora }}</sc-raw-td>
+                  <sc-raw-td>{{ rv.nPoliza }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;">{{ rv.vigenciaHasta }}</sc-raw-td>
+                  <sc-raw-td style="text-align:center;"><span class="tag {{ rv.tagClass }}">{{ rv.estado }}</span></sc-raw-td>
+                </sc-raw-tr>
+              </sc-for>
+              <sc-if value="{{ noRiesgosVigentes }}" hint-placeholder-val="{{ false }}">
+                <sc-raw-tr><sc-raw-td colspan="5" class="text-muted" style="padding:var(--space-4) var(--space-2);">Sin riesgos vigentes.</sc-raw-td></sc-raw-tr>
+              </sc-if>
+            </sc-raw-tbody>
+          </sc-raw-table>
+        </div>
+
+        <h3 style="margin-bottom:var(--space-3);">Próximos vencimientos</h3>
+        <div class="blueprint" style="padding:var(--space-3); margin-bottom:var(--space-8);">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-raw-table class="table" style="table-layout:fixed;">
+            
+            <sc-raw-thead><sc-raw-tr><sc-raw-th>N° Póliza</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Vence</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{ clientProximosVencimientos }}" as="pv" hint-placeholder-count="2">
+                <sc-raw-tr sc-camel-on-click="{{ pv.onClick }}" style="cursor:pointer;">
+                  <sc-raw-td>{{ pv.nPoliza }}</sc-raw-td>
+                  <sc-raw-td>{{ pv.aseguradora }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;">{{ pv.vigenciaHasta }}</sc-raw-td>
+                  <sc-raw-td style="text-align:center;"><span class="tag {{ pv.tagClass }}">{{ pv.estado }}</span></sc-raw-td>
+                </sc-raw-tr>
+              </sc-for>
+              <sc-if value="{{ noProximosVencimientosCliente }}" hint-placeholder-val="{{ false }}">
+                <sc-raw-tr><sc-raw-td colspan="4" class="text-muted" style="padding:var(--space-4) var(--space-2);">Sin vencimientos próximos.</sc-raw-td></sc-raw-tr>
+              </sc-if>
+            </sc-raw-tbody>
+          </sc-raw-table>
+        </div>
+
+        <h3 style="margin-bottom:var(--space-3);">Últimas cotizaciones</h3>
+        <div class="blueprint" style="padding:var(--space-3);">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-raw-table class="table" style="table-layout:fixed;">
+            
+            <sc-raw-thead><sc-raw-tr><sc-raw-th>Bien cotizado</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Mejor costo</sc-raw-th><sc-raw-th style="text-align:right;">Fecha</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{ clientCotizaciones }}" as="cq" hint-placeholder-count="2">
+                <sc-raw-tr><sc-raw-td>{{ cq.bien }}</sc-raw-td><sc-raw-td>{{ cq.aseguradora }}</sc-raw-td><sc-raw-td style="text-align:right;">{{ cq.costo }}</sc-raw-td><sc-raw-td style="text-align:right;">{{ cq.fecha }}</sc-raw-td><sc-raw-td style="text-align:center;"><span class="tag {{ cq.tagClass }}">{{ cq.estado }}</span></sc-raw-td></sc-raw-tr>
+              </sc-for>
+              <sc-if value="{{ noClientCotizaciones }}" hint-placeholder-val="{{ false }}">
+                <sc-raw-tr><sc-raw-td colspan="5" class="text-muted" style="padding:var(--space-4) var(--space-2);">Sin cotizaciones recientes.</sc-raw-td></sc-raw-tr>
+              </sc-if>
+            </sc-raw-tbody>
+          </sc-raw-table>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCotizacionesTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);">
+          <h3 style="margin:0;">Cotizaciones</h3>
+          <button class="btn btn-primary" sc-camel-on-click="{{ openNewQuoteDialog }}">+ Nueva Cotización</button>
+        </div>
+        <div class="blueprint" style="padding:var(--space-3);">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-raw-table class="table" style="table-layout:fixed;">
+            
+            <sc-raw-thead><sc-raw-tr><sc-raw-th>Ramo</sc-raw-th><sc-raw-th>Bien</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Costo</sc-raw-th><sc-raw-th style="text-align:right;">Fecha</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{ cotizacionesClienteRows }}" as="cq" hint-placeholder-count="2">
+                <sc-raw-tr sc-camel-on-click="{{ cq.onEdit }}" style="cursor:pointer;">
+                  <sc-raw-td>{{ cq.tipoLabel }}</sc-raw-td>
+                  <sc-raw-td>{{ cq.bien }}</sc-raw-td>
+                  <sc-raw-td>{{ cq.aseguradora }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;">{{ cq.costo }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;">{{ cq.fecha }}</sc-raw-td>
+                  <sc-raw-td style="text-align:center;"><span class="tag {{ cq.tagClass }}">{{ cq.estado }}</span></sc-raw-td>
+                </sc-raw-tr>
+              </sc-for>
+              <sc-if value="{{ noCotizacionesCliente }}" hint-placeholder-val="{{ false }}">
+                <sc-raw-tr><sc-raw-td colspan="6" class="text-muted" style="padding:var(--space-6); text-align:center;">Sin cotizaciones registradas.</sc-raw-td></sc-raw-tr>
+              </sc-if>
+            </sc-raw-tbody>
+          </sc-raw-table>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAssetTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);">
+          <h3 style="margin:0;">{{ activeTabLabel }}</h3>
+          <button class="btn btn-primary" sc-camel-on-click="{{ openNewAssetDialog }}">+ Agregar</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:var(--space-4);">
+          <sc-for list="{{ currentAssets }}" as="a" hint-placeholder-count="2">
+            <div class="card blueprint elev-sm">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div class="card-kicker">{{ a.aseguradora }}</div>
+                <span class="tag {{ a.tagClass }}">{{ a.estado }}</span>
+              </div>
+              <div class="card-title">{{ a.titulo }}</div>
+              <div class="card-body">
+                <sc-for list="{{ a.fieldRows }}" as="f" hint-placeholder-count="4">
+                  <div style="display:flex; justify-content:space-between; font-size:13px; padding:2px 0;">
+                    <span class="text-muted">{{ f.label }}</span><span>{{ f.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex; gap:var(--space-2); margin-top:var(--space-2);">
+                <button class="btn btn-ghost" sc-camel-on-click="{{ a.onEdit }}">Editar</button>
+                <button class="btn btn-ghost" sc-camel-on-click="{{ a.onDelete }}">Eliminar</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noAssets }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="padding:var(--space-6) 0; text-align:center;">Todavía no hay {{ activeTabLabel }} cargados.</p>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isAnterioresTab }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin-bottom:var(--space-4);">Bienes Anteriores</h3>
+        <div class="blueprint" style="padding:var(--space-3);">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-raw-table class="table">
+            <sc-raw-thead><sc-raw-tr><sc-raw-th>Tipo</sc-raw-th><sc-raw-th>Bien</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th>N° póliza</sc-raw-th><sc-raw-th>Vencía</sc-raw-th><sc-raw-th style="text-align:right;">Eliminado el</sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{ bienesAnteriores }}" as="ba" hint-placeholder-count="2">
+                <sc-raw-tr>
+                  <sc-raw-td>{{ ba.tipoLabel }}</sc-raw-td>
+                  <sc-raw-td>{{ ba.titulo }}</sc-raw-td>
+                  <sc-raw-td>{{ ba.aseguradora }}</sc-raw-td>
+                  <sc-raw-td>{{ ba.nPoliza }}</sc-raw-td>
+                  <sc-raw-td>{{ ba.vigenciaHasta }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;">{{ ba.eliminadoEl }}</sc-raw-td>
+                </sc-raw-tr>
+              </sc-for>
+              <sc-if value="{{ noBienesAnteriores }}" hint-placeholder-val="{{ false }}">
+                <sc-raw-tr><sc-raw-td colspan="6" class="text-muted" style="padding:var(--space-6); text-align:center;">Sin bienes anteriores.</sc-raw-td></sc-raw-tr>
+              </sc-if>
+            </sc-raw-tbody>
+          </sc-raw-table>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSiniestrosTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);">
+          <h3 style="margin:0;">Siniestros</h3>
+          <button class="btn btn-primary" sc-camel-on-click="{{ openNewSiniestroDialog }}">+ Registrar siniestro</button>
+        </div>
+        <div class="blueprint" style="padding:var(--space-3);">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-raw-table class="table">
+            <sc-raw-thead><sc-raw-tr><sc-raw-th>Fecha</sc-raw-th><sc-raw-th>Bien</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th><sc-raw-th>Descripción</sc-raw-th><sc-raw-th></sc-raw-th></sc-raw-tr></sc-raw-thead>
+            <sc-raw-tbody>
+              <sc-for list="{{ siniestrosRows }}" as="s" hint-placeholder-count="2">
+                <sc-raw-tr>
+                  <sc-raw-td>{{ s.fecha }}</sc-raw-td>
+                  <sc-raw-td>{{ s.tipoLabel }}</sc-raw-td>
+                  <sc-raw-td style="text-align:center;"><span class="tag {{ s.tagClass }}">{{ s.estado }}</span></sc-raw-td>
+                  <sc-raw-td>{{ s.descripcion }}</sc-raw-td>
+                  <sc-raw-td><button class="btn btn-ghost" sc-camel-on-click="{{ s.onDelete }}">Eliminar</button></sc-raw-td>
+                </sc-raw-tr>
+              </sc-for>
+            </sc-raw-tbody>
+          </sc-raw-table>
+          <sc-if value="{{ noSiniestros }}" hint-placeholder-val="{{ false }}">
+            <div class="text-muted" style="padding:var(--space-6); text-align:center;">Sin siniestros registrados.</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDocumentosTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);">
+          <h3 style="margin:0;">Documentos</h3>
+          <button class="btn btn-primary" sc-camel-on-click="{{ openNewDocDialog }}">+ Agregar documento</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:var(--space-3);">
+          <sc-for list="{{ documentRows }}" as="d" hint-placeholder-count="3">
+            <div class="card blueprint">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="card-kicker">{{ d.tipo }}</div>
+              <div class="card-title" style="font-size:15px;">{{ d.nombre }}</div>
+              <div class="card-meta">{{ d.fecha }}</div>
+              <button class="btn btn-ghost" sc-camel-on-click="{{ d.onDelete }}" style="align-self:flex-start;">Eliminar</button>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noDocuments }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="padding:var(--space-6) 0; text-align:center;">Sin documentos cargados.</p>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isNotasTab }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin-bottom:var(--space-3);">Notas internas</h3>
+        <div class="field" style="margin-bottom:var(--space-3);">
+          <textarea class="input" placeholder="Escribir una nota…" value="{{ newNote }}" sc-camel-on-change="{{ onNewNoteChange }}"></textarea>
+        </div>
+        <button class="btn btn-secondary" style="margin-bottom:var(--space-5);" sc-camel-on-click="{{ addNote }}">Agregar nota</button>
+        <div style="display:flex; flex-direction:column; gap:var(--space-3);">
+          <sc-for list="{{ noteRows }}" as="n" hint-placeholder-count="2">
+            <div class="card blueprint">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="card-meta">{{ n.author }} · {{ n.date }}</div>
+              <div class="card-body" style="opacity:1;">{{ n.text }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noNotes }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="text-align:center;">Sin notas todavía.</p>
+        </sc-if>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ quoteSearchDialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeQuoteSearchDialog }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg);">
+        <div class="dialog-title">Nueva Cotización — Buscar cliente</div>
+        <div class="field">
+          <label>DNI / CUIL / CUIT, Nombre, Apellido o Razón Social</label>
+          <input class="input" type="text" placeholder="Buscar…" value="{{ quoteSearch }}" sc-camel-on-change="{{ onQuoteSearchChange }}">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:var(--space-2); max-height:280px; overflow:auto; margin-top:var(--space-2);">
+          <sc-for list="{{ quoteSearchResults }}" as="qc" hint-placeholder-count="2">
+            <div class="card blueprint" style="cursor:pointer;" sc-camel-on-click="{{ qc.onClick }}">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="card-title" style="font-size:15px;">{{ qc.nombre }}</div>
+              <div class="card-meta">{{ qc.tipoDocumento }} {{ qc.dni }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noQuoteSearchResults }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="text-align:center; padding:var(--space-4) 0;">Sin resultados.</p>
+          <button class="btn btn-primary btn-block" sc-camel-on-click="{{ openNewClientFromQuote }}">+ Agregar Cliente</button>
+        </sc-if>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeQuoteSearchDialog }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeQuoteSearchDialog }}">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showPolizasModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closePolizasModal }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-width:760px; max-height:82vh; overflow:auto;">
+        <div class="dialog-title">Pólizas vigentes</div>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Cliente</sc-raw-th><sc-raw-th>Tipo</sc-raw-th><sc-raw-th>N° Póliza</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Vence</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ polizasVigentesRows }}" as="row" hint-placeholder-count="4">
+              <sc-raw-tr>
+                <sc-raw-td>{{ row.clienteNombre }}</sc-raw-td>
+                <sc-raw-td>{{ row.tipoLabel }}</sc-raw-td>
+                <sc-raw-td>{{ row.nPoliza }}</sc-raw-td>
+                <sc-raw-td>{{ row.aseguradora }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ row.vigenciaHasta }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;"><span class="tag {{ row.tagClass }}">{{ row.estado }}</span></sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+            <sc-if value="{{ noPolizasVigentes }}" hint-placeholder-val="{{ false }}">
+              <sc-raw-tr><sc-raw-td colspan="6" class="text-muted" style="padding:var(--space-4) var(--space-2);">No hay pólizas vigentes.</sc-raw-td></sc-raw-tr>
+            </sc-if>
+          </sc-raw-tbody>
+        </sc-raw-table>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closePolizasModal }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closePolizasModal }}">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showVencimientosModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeVencimientosModal }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-width:760px; max-height:82vh; overflow:auto;">
+        <div class="dialog-title">Vencimientos de los próximos 30 días</div>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Cliente</sc-raw-th><sc-raw-th>Tipo</sc-raw-th><sc-raw-th>N° Póliza</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Vence</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ vencimientos30Rows }}" as="row" hint-placeholder-count="4">
+              <sc-raw-tr style="cursor:pointer;" sc-camel-on-click="{{ row.onClick }}">
+                <sc-raw-td>{{ row.clienteNombre }}</sc-raw-td>
+                <sc-raw-td>{{ row.tipoLabel }}</sc-raw-td>
+                <sc-raw-td>{{ row.nPoliza }}</sc-raw-td>
+                <sc-raw-td>{{ row.aseguradora }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ row.vigenciaHasta }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;"><span class="tag {{ row.tagClass }}">{{ row.estado }}</span></sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+            <sc-if value="{{ noVencimientos30 }}" hint-placeholder-val="{{ false }}">
+              <sc-raw-tr><sc-raw-td colspan="6" class="text-muted" style="padding:var(--space-4) var(--space-2);">No hay vencimientos en los próximos 30 días.</sc-raw-td></sc-raw-tr>
+            </sc-if>
+          </sc-raw-tbody>
+        </sc-raw-table>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeVencimientosModal }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeVencimientosModal }}">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showSiniestrosModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeSiniestrosModal }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-width:760px; max-height:82vh; overflow:auto;">
+        <div class="dialog-title">Siniestros activos</div>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Cliente</sc-raw-th><sc-raw-th>Fecha</sc-raw-th><sc-raw-th>Tipo</sc-raw-th><sc-raw-th>Estado</sc-raw-th><sc-raw-th>Descripción</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ siniestrosActivosRows }}" as="row" hint-placeholder-count="4">
+              <sc-raw-tr style="cursor:pointer;" sc-camel-on-click="{{ row.onClick }}">
+                <sc-raw-td>{{ row.clienteNombre }}</sc-raw-td>
+                <sc-raw-td>{{ row.fecha }}</sc-raw-td>
+                <sc-raw-td>{{ row.tipoLabel }}</sc-raw-td>
+                <sc-raw-td><span class="tag {{ row.tagClass }}">{{ row.estado }}</span></sc-raw-td>
+                <sc-raw-td>{{ row.descripcion }}</sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+            <sc-if value="{{ noSiniestrosActivos }}" hint-placeholder-val="{{ false }}">
+              <sc-raw-tr><sc-raw-td colspan="5" class="text-muted" style="padding:var(--space-4) var(--space-2);">No hay siniestros activos.</sc-raw-td></sc-raw-tr>
+            </sc-if>
+          </sc-raw-tbody>
+        </sc-raw-table>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeSiniestrosModal }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeSiniestrosModal }}">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showCotizacionesModal }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeCotizacionesModal }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-width:820px; max-height:82vh; overflow:auto;">
+        <div class="dialog-title">Cotizaciones de los últimos 30 días</div>
+        <sc-raw-table class="table">
+          <sc-raw-thead>
+            <sc-raw-tr><sc-raw-th>Cliente</sc-raw-th><sc-raw-th>Bien cotizado</sc-raw-th><sc-raw-th>Aseguradora</sc-raw-th><sc-raw-th style="text-align:right;">Costo</sc-raw-th><sc-raw-th style="text-align:right;">Fecha</sc-raw-th><sc-raw-th style="text-align:center;">Estado</sc-raw-th></sc-raw-tr>
+          </sc-raw-thead>
+          <sc-raw-tbody>
+            <sc-for list="{{ cotizaciones30Rows }}" as="row" hint-placeholder-count="4">
+              <sc-raw-tr style="cursor:pointer;" sc-camel-on-click="{{ row.onClick }}">
+                <sc-raw-td>{{ row.clienteNombre }}</sc-raw-td>
+                <sc-raw-td>{{ row.bien }}</sc-raw-td>
+                <sc-raw-td>{{ row.aseguradora }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ row.costo }}</sc-raw-td>
+                <sc-raw-td style="text-align:right;">{{ row.fecha }}</sc-raw-td>
+                <sc-raw-td style="text-align:center;"><span class="tag {{ row.tagClass }}">{{ row.estado }}</span></sc-raw-td>
+              </sc-raw-tr>
+            </sc-for>
+            <sc-if value="{{ noCotizaciones30 }}" hint-placeholder-val="{{ false }}">
+              <sc-raw-tr><sc-raw-td colspan="6" class="text-muted" style="padding:var(--space-4) var(--space-2);">No hay cotizaciones en los últimos 30 días.</sc-raw-td></sc-raw-tr>
+            </sc-if>
+          </sc-raw-tbody>
+        </sc-raw-table>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeCotizacionesModal }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeCotizacionesModal }}">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ clientDialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeClientDialog }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg);">
+        <div class="dialog-title">{{ clientDialogTitle }}</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+          <div class="field"><label>Apellido</label><input class="input" type="text" value="{{ clientForm.apellido }}" sc-camel-on-change="{{ onClientFieldApellido }}"></div>
+          <div class="field"><label>Nombre</label><input class="input" type="text" value="{{ clientForm.nombre }}" sc-camel-on-change="{{ onClientFieldNombre }}"></div>
+          <div class="field">
+            <label>Tipo de documento</label>
+            <sc-raw-select class="input" value="{{ clientForm.tipoDocumento }}" sc-camel-on-change="{{ onClientFieldTipoDocumento }}">
+              <option value="DNI">DNI</option>
+              <option value="CUIL">CUIL</option>
+              <option value="CUIT">CUIT</option>
+            </sc-raw-select>
+          </div>
+          <div class="field"><label>Número de documento</label><input class="input" type="text" value="{{ clientForm.dni }}" sc-camel-on-change="{{ onClientFieldDni }}"></div>
+          <div class="field">
+            <label>Condición fiscal</label>
+            <sc-raw-select class="input" value="{{ clientForm.condicionFiscal }}" sc-camel-on-change="{{ onClientFieldCondicionFiscal }}">
+              <option value="Consumidor Final">Consumidor Final</option>
+              <option value="Monotributista">Monotributista</option>
+              <option value="Responsable Inscripto">Responsable Inscripto</option>
+              <option value="Exento">Exento</option>
+            </sc-raw-select>
+          </div>
+          <div class="field"><label>Fecha de nacimiento</label><input class="input" type="date" value="{{ clientForm.fechaNacimiento }}" sc-camel-on-change="{{ onClientFieldFechaNacimiento }}"></div>
+          <div class="field"><label>Teléfono</label><input class="input" type="text" value="{{ clientForm.telefono }}" sc-camel-on-change="{{ onClientFieldTelefono }}"></div>
+          <div class="field"><label>Email</label><input class="input" type="text" value="{{ clientForm.email }}" sc-camel-on-change="{{ onClientFieldEmail }}"></div>
+        </div>
+        <div class="field"><label>Dirección</label><input class="input" type="text" value="{{ clientForm.direccion }}" sc-camel-on-change="{{ onClientFieldDireccion }}"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+          <div class="field">
+            <label>Provincia</label>
+            <sc-raw-select class="input" value="{{ clientForm.provincia }}" sc-camel-on-change="{{ onClientFieldProvincia }}">
+              <option value="">Seleccionar…</option>
+              <sc-for list="{{ provinciaOptions }}" as="p" hint-placeholder-count="24">
+                <option value="{{ p }}">{{ p }}</option>
+              </sc-for>
+            </sc-raw-select>
+          </div>
+          <div class="field"><label>Localidad</label><input class="input" type="text" value="{{ clientForm.localidad }}" sc-camel-on-change="{{ onClientFieldLocalidad }}"></div>
+          <div class="field"><label>Código postal</label><input class="input" type="text" value="{{ clientForm.codigoPostal }}" sc-camel-on-change="{{ onClientFieldCodigoPostal }}"></div>
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeClientDialog }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeClientDialog }}">Cancelar</button>
+          <button class="btn btn-primary" sc-camel-on-click="{{ saveClient }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+
+
+</div>
+
+
+<script type="text/x-dc" data-dc-script="">
+const TODAY = new Date('2026-07-23');
+
+const ASSET_TYPES = [
+  { key: 'auto', label: 'Autos / Motos', singular: 'un auto o moto', fields: [
+    { k: 'marca', l: 'Marca', t: 'text' }, { k: 'modelo', l: 'Modelo', t: 'text' },
+    { k: 'anio', l: 'Año', t: 'number' }, { k: 'patente', l: 'Patente', t: 'text' },
+    { k: 'coberturaContratada', l: 'Cobertura Contratada', t: 'text' }, { k: 'franquicia', l: 'Franquicia', t: 'text' } ] },
+  { key: 'inmueble', label: 'Inmuebles', singular: 'un inmueble', fields: [
+    { k: 'direccion', l: 'Dirección', t: 'text' }, { k: 'tipoInmueble', l: 'Tipo de Inmueble', t: 'text' },
+    { k: 'provincia', l: 'Provincia', t: 'text' }, { k: 'localidad', l: 'Localidad', t: 'text' },
+    { k: 'codigoPostal', l: 'Código Postal', t: 'text' }, { k: 'm2', l: 'm²', t: 'number' },
+    { k: 'valorLearisk', l: 'Valor Learisk', t: 'text' }, { k: 'tipoCobertura', l: 'Tipo de Cobertura', t: 'text' } ] },
+  { key: 'negocio', label: 'Comercio', singular: 'un comercio', fields: [
+    { k: 'direccion', l: 'Dirección', t: 'text' }, { k: 'tipoInmueble', l: 'Tipo de Inmueble', t: 'text' },
+    { k: 'provincia', l: 'Provincia', t: 'text' }, { k: 'localidad', l: 'Localidad', t: 'text' },
+    { k: 'codigoPostal', l: 'Código Postal', t: 'text' }, { k: 'm2', l: 'm²', t: 'number' },
+    { k: 'valorLearisk', l: 'Valor Learisk', t: 'text' }, { k: 'tipoCobertura', l: 'Tipo de Cobertura', t: 'text' } ] },
+  { key: 'consorcio', label: 'Consorcio', singular: 'un consorcio', fields: [
+    { k: 'direccion', l: 'Dirección', t: 'text' }, { k: 'tipoInmueble', l: 'Tipo de Inmueble', t: 'text' },
+    { k: 'provincia', l: 'Provincia', t: 'text' }, { k: 'localidad', l: 'Localidad', t: 'text' },
+    { k: 'codigoPostal', l: 'Código Postal', t: 'text' }, { k: 'm2', l: 'm²', t: 'number' },
+    { k: 'valorLearisk', l: 'Valor Learisk', t: 'text' }, { k: 'tipoCobertura', l: 'Tipo de Cobertura', t: 'text' },
+    { k: 'cantPisos', l: 'Cant. Pisos', t: 'number' }, { k: 'cantUF', l: 'Cant. UF', t: 'number' },
+    { k: 'cantAscensores', l: 'Cant. Elevadores', t: 'number' }, { k: 'cantTermotanques', l: 'Cant. Termotanques/Calderas', t: 'number' },
+    { k: 'cantLocales', l: 'Cant. Locales', t: 'number' }, { k: 'cantEstacionamientos', l: 'Cant. Estacionamientos', t: 'number' } ] },
+  { key: 'vidaSalud', label: 'AP / Vida', singular: 'una cobertura de AP/Vida', fields: [
+    { k: 'tipoCobertura', l: 'Tipo (AP/vida)', t: 'text' }, { k: 'beneficiarios', l: 'Beneficiarios', t: 'text' } ] },
+  { key: 'art', label: 'ART', singular: 'una ART', fields: [
+    { k: 'razonSocial', l: 'Razón social empleador', t: 'text' }, { k: 'cantEmpleados', l: 'Cant. empleados', t: 'number' } ] },
+  { key: 'caucion', label: 'Caución', singular: 'una caución', fields: [
+    { k: 'tipoCaucion', l: 'Tipo de caución', t: 'text' }, { k: 'beneficiario', l: 'Beneficiario', t: 'text' } ] },
+  { key: 'tecnico', label: 'Seg. Técnico', singular: 'un seguro técnico', fields: [
+    { k: 'tipoEquipo', l: 'Equipo / obra', t: 'text' } ] },
+];
+
+function assetTypeByKey(key) { return ASSET_TYPES.find(t => t.key === key); }
+
+const PROVINCIAS = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
+const ASEGURADORAS = ['Allianz', 'Barbuss', 'BBVA', 'Berkley', 'Chubb', 'Experta', 'Federación Patronal', 'Galicia', 'Integrity', 'La Caja', 'La Segunda', 'Mercantil Andina', 'Meridional', 'San Cristóbal', 'Sancor', 'Zurich'];
+
+function nombreCompleto(c) { return c.apellido + ', ' + c.nombre; }
+
+const USERS = [
+  { id: 'u1', nombre: 'María Cabrera', iniciales: 'MC' },
+  { id: 'u2', nombre: 'Joseph Fonseca', iniciales: 'JF' },
+  { id: 'u3', nombre: 'Lucas Herrera', iniciales: 'LH' },
+  { id: 'u4', nombre: 'Valentina Ríos', iniciales: 'VR' },
+];
+function userById(id) { return USERS.find(u => u.id === id); }
+
+function quoteTagClass(estado) {
+  if (estado === 'Aceptada') return 'tag-accent';
+  if (estado === 'Rechazada') return 'tag-neutral';
+  return 'tag-outline';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function estadoFor(hastaIso) {
+  if (!hastaIso) return { estado: 'Vigente', tagClass: 'tag-accent' };
+  const end = new Date(hastaIso + 'T00:00:00');
+  const diffDays = (end - TODAY) / (1000 * 3600 * 24);
+  if (diffDays < 0) return { estado: 'Vencida', tagClass: 'tag-neutral' };
+  if (diffDays <= 30) return { estado: 'Por vencer', tagClass: 'tag-outline' };
+  return { estado: 'Vigente', tagClass: 'tag-accent' };
+}
+
+function tituloFor(typeKey, asset) {
+  if (typeKey === 'auto') return (asset.marca || 'Auto') + ' ' + (asset.modelo || '');
+  if (typeKey === 'inmueble') return asset.direccion || 'Inmueble';
+  if (typeKey === 'consorcio') return asset.direccion || 'Consorcio';
+  if (typeKey === 'negocio') return asset.direccion || 'Comercio';
+  if (typeKey === 'vidaSalud') return asset.tipoCobertura || 'Vida/Salud';
+  if (typeKey === 'art') return asset.razonSocial || 'ART';
+  if (typeKey === 'ap') return asset.cobertura || 'Accidentes personales';
+  if (typeKey === 'caucion') return asset.tipoCaucion || 'Caución';
+  if (typeKey === 'tecnico') return asset.tipoEquipo || 'Seguro técnico';
+  return 'Bien';
+}
+
+let uidCounter = 1000;
+function uid() { return 'id' + (uidCounter++); }
+
+function emptyClientForm() {
+  return { apellido: '', nombre: '', tipoDocumento: 'DNI', dni: '', condicionFiscal: 'Consumidor Final', telefono: '', email: '', direccion: '', fechaNacimiento: '', provincia: '', localidad: '', codigoPostal: '' };
+}
+
+function emptyAssetForm() {
+  return { aseguradora: '', nPoliza: '', sumaAsegurada: '', prima: '', vigenciaDesde: '', vigenciaHasta: '',
+    operacion: 'Nuevo', tipoVehiculo: 'Auto', fechaCotizacion: '', estadoCotizacion: 'Cotizada', esNuestra: false, formaPago: 'Efectivo', vencimientoPagoDia: '1', vencimientoPagoMes: '1', nChasis: '', nMotor: '', monedaSuma: '$', monedaPrima: '$', coberturaContratada: 'Resp. Civil', franquicia: 'N/A' };
+}
+
+function seedClients() {
+  return [
+    {
+      id: 'c1', apellido: 'Fernández', nombre: 'Roberto', tipoDocumento: 'DNI', dni: '24.556.891', condicionFiscal: 'Consumidor Final', telefono: '11-4455-6677', email: 'rfernandez@mail.com',
+      fechaNacimiento: '1978-03-14', provincia: 'CABA', localidad: 'CABA', codigoPostal: '1428',
+      direccion: 'Av. Cabildo 2140, CABA', actualizado: '18/07/2026',
+      bienes: {
+        auto: [{ id: uid(), aseguradora: 'La Segunda', nPoliza: 'AU-4521', sumaAsegurada: 8500000, prima: 42000, vigenciaDesde: '2026-01-10', vigenciaHasta: '2027-01-10', marca: 'Toyota', modelo: 'Corolla', anio: '2022', patente: 'AC123DE' }],
+        inmueble: [{ id: uid(), aseguradora: 'Sancor Seguros', nPoliza: 'IN-9081', sumaAsegurada: 95000000, prima: 68000, vigenciaDesde: '2025-09-01', vigenciaHasta: '2026-08-05', direccion: 'Av. Cabildo 2140, CABA', tipoInmueble: 'Departamento', m2: '75' }],
+        negocio: [], vidaSalud: [], art: [], ap: [], caucion: [], tecnico: [],
+      },
+      siniestros: [{ id: uid(), fecha: '2026-05-12', tipo: 'auto', estado: 'Cerrado', descripcion: 'Choque leve en cochera, daños en paragolpes.' }],
+      documentos: [{ id: uid(), nombre: 'DNI frente y dorso', tipo: 'DNI', fecha: '10/01/2026' }],
+      notas: [{ id: uid(), author: 'M. Cabrera', date: '15/07/2026', text: 'Cliente prefiere contacto por WhatsApp.' }],
+    },
+    {
+      id: 'c2', apellido: 'Gómez', nombre: 'Lucía', tipoDocumento: 'CUIT', dni: '30-30112447-5', condicionFiscal: 'Responsable Inscripto', telefono: '11-2233-9988', email: 'lucia.gomez@mail.com',
+      fechaNacimiento: '1990-11-02', provincia: 'Buenos Aires', localidad: 'Vicente López', codigoPostal: '1638',
+      direccion: 'San Martín 456, Vicente López', actualizado: '20/07/2026',
+      bienes: {
+        auto: [{ id: uid(), aseguradora: 'Federación Patronal', nPoliza: 'AU-7712', sumaAsegurada: 6200000, prima: 31000, vigenciaDesde: '2025-08-01', vigenciaHasta: '2026-08-01', marca: 'Volkswagen', modelo: 'Vento', anio: '2021', patente: 'AE456FG' }],
+        inmueble: [], negocio: [{ id: uid(), aseguradora: 'Zurich', nPoliza: 'NG-2201', sumaAsegurada: 30000000, prima: 55000, vigenciaDesde: '2026-02-01', vigenciaHasta: '2027-02-01', razonSocial: 'Gómez Indumentaria SRL', rubro: 'Comercio minorista', direccion: 'San Martín 456' }],
+        vidaSalud: [], art: [{ id: uid(), aseguradora: 'Provincia ART', nPoliza: 'ART-330', sumaAsegurada: 0, prima: 24000, vigenciaDesde: '2026-01-01', vigenciaHasta: '2027-01-01', razonSocial: 'Gómez Indumentaria SRL', cantEmpleados: '6' }],
+        ap: [], caucion: [], tecnico: [],
+      },
+      siniestros: [], documentos: [], notas: [],
+    },
+    {
+      id: 'c3', apellido: 'Iturralde', nombre: 'Marcelo', tipoDocumento: 'DNI', dni: '18.774.321', condicionFiscal: 'Monotributista', telefono: '11-6677-1122', email: 'marcelo.it@mail.com',
+      fechaNacimiento: '1965-07-22', provincia: 'Buenos Aires', localidad: 'Pilar', codigoPostal: '1629',
+      direccion: 'Ruta 8 Km 45, Pilar', actualizado: '05/07/2026',
+      bienes: {
+        auto: [], inmueble: [{ id: uid(), aseguradora: 'La Caja', nPoliza: 'IN-5541', sumaAsegurada: 150000000, prima: 120000, vigenciaDesde: '2025-07-20', vigenciaHasta: '2026-07-28', direccion: 'Ruta 8 Km 45, Pilar', tipoInmueble: 'Casa', m2: '320' }],
+        negocio: [], vidaSalud: [{ id: uid(), aseguradora: 'Galicia Seguros', nPoliza: 'VS-118', sumaAsegurada: 20000000, prima: 15000, vigenciaDesde: '2026-03-01', vigenciaHasta: '2027-03-01', tipoCobertura: 'Vida', beneficiarios: 'Cónyuge e hijos' }],
+        art: [], ap: [], caucion: [{ id: uid(), aseguradora: 'Aseguradora de Créditos', nPoliza: 'CA-901', sumaAsegurada: 5000000, prima: 9000, vigenciaDesde: '2025-11-01', vigenciaHasta: '2026-08-10', tipoCaucion: 'Alquiler comercial', beneficiario: 'Inmobiliaria del Norte' }],
+        tecnico: [],
+      },
+      siniestros: [{ id: uid(), fecha: '2026-06-30', tipo: 'inmueble', estado: 'En proceso', descripcion: 'Filtración de agua por tormenta, daño en techo.' }],
+      documentos: [{ id: uid(), nombre: 'Escritura propiedad', tipo: 'Título', fecha: '20/07/2025' }, { id: uid(), nombre: 'Foto frente de la casa', tipo: 'Foto', fecha: '20/07/2025' }],
+      notas: [],
+    },
+    {
+      id: 'c4', apellido: 'Suárez', nombre: 'Andrea', tipoDocumento: 'CUIL', dni: '27-27998005-4', condicionFiscal: 'Consumidor Final', telefono: '11-3344-5566', email: 'andrea.suarez@mail.com',
+      fechaNacimiento: '1984-05-30', provincia: 'Santa Fe', localidad: 'Rosario', codigoPostal: '2000',
+      direccion: 'Belgrano 1200, Rosario', actualizado: '22/07/2026',
+      bienes: {
+        auto: [{ id: uid(), aseguradora: 'Mercantil Andina', nPoliza: 'AU-1190', sumaAsegurada: 9800000, prima: 51000, vigenciaDesde: '2026-06-01', vigenciaHasta: '2027-06-01', marca: 'Ford', modelo: 'Territory', anio: '2023', patente: 'AF789HI' }],
+        inmueble: [], negocio: [], vidaSalud: [], art: [], ap: [{ id: uid(), aseguradora: 'La Segunda', nPoliza: 'AP-410', sumaAsegurada: 10000000, prima: 8000, vigenciaDesde: '2026-01-15', vigenciaHasta: '2026-08-01', cobertura: 'Muerte e invalidez total' }],
+        caucion: [], tecnico: [{ id: uid(), aseguradora: 'Sancor Seguros', nPoliza: 'TE-303', sumaAsegurada: 40000000, prima: 33000, vigenciaDesde: '2026-04-01', vigenciaHasta: '2027-04-01', tipoEquipo: 'Obra en construcción - local comercial' }],
+      },
+      siniestros: [], documentos: [], notas: [{ id: uid(), author: 'M. Cabrera', date: '01/07/2026', text: 'Renovar cotización de vida antes de fin de año.' }],
+    },
+  ];
+}
+
+function seedCotizaciones() {
+  return [
+    { id: uid(), clienteNombre: 'Fernández, Roberto', bien: 'Auto Toyota Corolla', aseguradora: 'La Segunda', costo: 39500, fecha: '2026-07-20', estado: 'Aceptada' },
+    { id: uid(), clienteNombre: 'Ramos, Diego (prospecto)', bien: 'Inmueble - Casa', aseguradora: 'Sancor Seguros', costo: 112000, fecha: '2026-07-18', estado: 'Pendiente' },
+    { id: uid(), clienteNombre: 'Gómez, Lucía', bien: 'Negocio - Comercio minorista', aseguradora: 'Zurich', costo: 58000, fecha: '2026-07-14', estado: 'Pendiente' },
+    { id: uid(), clienteNombre: 'Suárez, Andrea', bien: 'Seguro técnico - Obra', aseguradora: 'Sancor Seguros', costo: 31000, fecha: '2026-07-09', estado: 'Rechazada' },
+  ];
+}
+
+class Component extends DCLogic {
+  state = {
+    view: 'dashboard',
+    selectedClientId: null,
+    activeTab: 'resumen',
+    search: '',
+    clients: seedClients(),
+    cotizaciones: seedCotizaciones(),
+    clientDialogOpen: false, editingClientId: null, clientForm: emptyClientForm(),
+    showAssetModal: false, editingAssetId: null, editingQuoteId: null, assetForm: emptyAssetForm(),
+    showSiniestroModal: false, siniestroForm: { fecha: '', tipo: 'auto', estado: 'Abierto', descripcion: '' },
+    showDocModal: false, docForm: { nombre: '', tipo: '' },
+    newNote: '',
+    quoteSearchDialogOpen: false, quoteSearch: '',
+    showQuoteTypeModal: false, quoteTypeChoice: 'auto',
+    showPolizasModal: false, showVencimientosModal: false, showSiniestrosModal: false, showCotizacionesModal: false,
+    taskLists: [
+      { id: 'tl1', nombre: 'Mis tareas', tareas: [
+        { id: uid(), texto: 'Llamar a Roberto Fernández por renovación', hecha: false, recordatorio: '2026-07-24', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' },
+        { id: uid(), texto: 'Enviar cotización a Diego Ramos', hecha: false, recordatorio: '', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' },
+        { id: uid(), texto: 'Actualizar pólizas vencidas', hecha: true, recordatorio: '', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' },
+      ] },
+      { id: 'tl2', nombre: 'Renovaciones', tareas: [] },
+    ],
+    activeTaskListId: 'tl1', newTaskText: '', newListName: '',
+    taskDetailOpen: false, taskDetailId: null, newStepText: '',
+  };
+
+  stopProp = (e) => e.stopPropagation();
+  goDashboard = () => this.setState({ view: 'dashboard', selectedClientId: null });
+  goClients = () => this.setState({ view: 'clients', selectedClientId: null });
+  goTasks = () => this.setState({ view: 'tasks' });
+  selectTaskList = (id) => this.setState({ activeTaskListId: id });
+  onNewTaskTextChange = (e) => this.setState({ newTaskText: e.target.value });
+  addTask = () => {
+    if (!this.state.newTaskText.trim()) return;
+    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
+      ? { ...l, tareas: [...l.tareas, { id: uid(), texto: this.state.newTaskText, hecha: false, recordatorio: '', pasos: [], miDia: false, horaAviso: '', vence: '', repetir: false, asignadoA: '', archivo: '', nota: '' }] } : l);
+    this.setState({ taskLists, newTaskText: '' });
+  };
+  openTaskDetail = (taskId) => this.setState({ taskDetailOpen: true, taskDetailId: taskId, newStepText: '' });
+  closeTaskDetail = () => this.setState({ taskDetailOpen: false });
+  updateTaskField = (field, value) => {
+    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
+      ? { ...l, tareas: l.tareas.map(t => t.id === this.state.taskDetailId ? { ...t, [field]: value } : t) } : l);
+    this.setState({ taskLists });
+  };
+  onNewStepTextChange = (e) => this.setState({ newStepText: e.target.value });
+  addStep = () => {
+    if (!this.state.newStepText.trim()) return;
+    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
+      ? { ...l, tareas: l.tareas.map(t => t.id === this.state.taskDetailId ? { ...t, pasos: [...t.pasos, { id: uid(), texto: this.state.newStepText, hecha: false }] } : t) } : l);
+    this.setState({ taskLists, newStepText: '' });
+  };
+  toggleStep = (stepId) => {
+    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
+      ? { ...l, tareas: l.tareas.map(t => t.id === this.state.taskDetailId ? { ...t, pasos: t.pasos.map(p => p.id === stepId ? { ...p, hecha: !p.hecha } : p) } : t) } : l);
+    this.setState({ taskLists });
+  };
+  toggleTask = (taskId) => {
+    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
+      ? { ...l, tareas: l.tareas.map(t => t.id === taskId ? { ...t, hecha: !t.hecha } : t) } : l);
+    this.setState({ taskLists });
+  };
+  deleteTask = (taskId) => {
+    const taskLists = this.state.taskLists.map(l => l.id === this.state.activeTaskListId
+      ? { ...l, tareas: l.tareas.filter(t => t.id !== taskId) } : l);
+    this.setState({ taskLists });
+  };
+  onNewListNameChange = (e) => this.setState({ newListName: e.target.value });
+  addTaskList = () => {
+    if (!this.state.newListName.trim()) return;
+    const nl = { id: uid(), nombre: this.state.newListName, tareas: [] };
+    this.setState({ taskLists: [...this.state.taskLists, nl], newListName: '', activeTaskListId: nl.id });
+  };
+  selectClient = (id, tab) => this.setState({ view: 'clientDetail', selectedClientId: id, activeTab: tab || 'resumen' });
+
+  onSearchChange = (e) => this.setState({ search: e.target.value });
+
+  closeAllDialogs = () => ({ clientDialogOpen: false, showAssetModal: false, showSiniestroModal: false, showDocModal: false });
+  openNewClientDialog = () => this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: null, clientForm: emptyClientForm() });
+  openEditClientDialog = () => {
+    const c = this.state.clients.find(c => c.id === this.state.selectedClientId);
+    this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: c.id, clientForm: { apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipoDocumento || 'DNI', dni: c.dni, condicionFiscal: c.condicionFiscal || 'Consumidor Final', telefono: c.telefono, email: c.email, direccion: c.direccion, fechaNacimiento: c.fechaNacimiento || '', provincia: c.provincia || '', localidad: c.localidad || '', codigoPostal: c.codigoPostal || '' } });
+  };
+  closeClientDialog = () => this.setState({ clientDialogOpen: false });
+  onClientFieldApellido = (e) => this.setState({ clientForm: { ...this.state.clientForm, apellido: e.target.value } });
+  onClientFieldNombre = (e) => this.setState({ clientForm: { ...this.state.clientForm, nombre: e.target.value } });
+  onClientFieldTipoDocumento = (e) => this.setState({ clientForm: { ...this.state.clientForm, tipoDocumento: e.target.value } });
+  onClientFieldCondicionFiscal = (e) => this.setState({ clientForm: { ...this.state.clientForm, condicionFiscal: e.target.value } });
+  onClientFieldDni = (e) => this.setState({ clientForm: { ...this.state.clientForm, dni: e.target.value } });
+  onClientFieldTelefono = (e) => this.setState({ clientForm: { ...this.state.clientForm, telefono: e.target.value } });
+  onClientFieldEmail = (e) => this.setState({ clientForm: { ...this.state.clientForm, email: e.target.value } });
+  onClientFieldDireccion = (e) => this.setState({ clientForm: { ...this.state.clientForm, direccion: e.target.value } });
+  onClientFieldFechaNacimiento = (e) => this.setState({ clientForm: { ...this.state.clientForm, fechaNacimiento: e.target.value } });
+  onClientFieldProvincia = (e) => this.setState({ clientForm: { ...this.state.clientForm, provincia: e.target.value } });
+  onClientFieldLocalidad = (e) => this.setState({ clientForm: { ...this.state.clientForm, localidad: e.target.value } });
+  onClientFieldCodigoPostal = (e) => this.setState({ clientForm: { ...this.state.clientForm, codigoPostal: e.target.value } });
+  saveClient = () => {
+    const f = this.state.clientForm;
+    if (!f.apellido || !f.nombre) return;
+    const today = TODAY.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (this.state.editingClientId) {
+      this.setState({
+        clients: this.state.clients.map(c => c.id === this.state.editingClientId ? { ...c, ...f, actualizado: today } : c),
+        clientDialogOpen: false,
+      });
+    } else {
+      const nc = { id: uid(), ...f, actualizado: today, bienes: Object.fromEntries(ASSET_TYPES.map(t => [t.key, []])), bienesAnteriores: [], cotizacionesRiesgos: [], siniestros: [], documentos: [], notas: [] };
+      this.setState({ clients: [...this.state.clients, nc], clientDialogOpen: false });
+    }
+  };
+
+  openNewAssetDialog = () => {
+    this.setState({ editingAssetId: null, editingQuoteId: null });
+    this.setState({ assetForm: emptyAssetForm() });
+    this.setState({ showAssetModal: true });
+  };
+  openNewQuoteDialog = () => {
+    this.setState({ quoteTypeChoice: 'auto' });
+    this.setState({ showQuoteTypeModal: true });
+  };
+  closeQuoteTypeModal = () => this.setState({ showQuoteTypeModal: false });
+  onQuoteTypeChoiceChange = (e) => this.setState({ quoteTypeChoice: e.target.value });
+  continueToQuoteForm = () => {
+    this.setState({ activeTab: this.state.quoteTypeChoice, editingAssetId: null, editingQuoteId: null });
+    this.setState({ assetForm: emptyAssetForm() });
+    this.setState({ showQuoteTypeModal: false });
+    this.setState({ showAssetModal: true });
+  };
+  openEditAsset = (typeKey, asset) => {
+    this.setState({ editingAssetId: asset.id, editingQuoteId: null });
+    this.setState({ assetForm: { ...asset } });
+    this.setState({ showAssetModal: true });
+  };
+  openEditQuote = (q) => {
+    const partes = (q.bien || '').split(' ');
+    this.setState({
+      activeTab: q.typeKey, editingAssetId: null, editingQuoteId: q.id,
+      assetForm: { ...emptyAssetForm(), aseguradora: q.aseguradora || '', fechaCotizacion: q.fecha || '',
+        estadoCotizacion: q.estado || 'Cotizada', esNuestra: false,
+        prima: q.costo ? Number(q.costo).toLocaleString('es-AR') : '',
+        tipoVehiculo: partes[0] || 'Auto', marca: partes[1] || '', modelo: partes.slice(2).join(' ') },
+      showAssetModal: true,
+    });
+  };
+  closeAssetDialog = () => this.setState({ showAssetModal: false, editingQuoteId: null });
+  onAssetFieldAseguradora = (e) => this.setState({ assetForm: { ...this.state.assetForm, aseguradora: e.target.value } });
+  onAssetFieldCoberturaContratada = (e) => this.setState({ assetForm: { ...this.state.assetForm, coberturaContratada: e.target.value } });
+  onAssetFieldFranquicia = (e) => this.setState({ assetForm: { ...this.state.assetForm, franquicia: e.target.value } });
+  onAssetFieldNPoliza = (e) => this.setState({ assetForm: { ...this.state.assetForm, nPoliza: e.target.value } });
+  onAssetFieldTipoInmueble = (e) => this.updateAssetExtraField('tipoInmueble', e.target.value);
+  onAssetFieldDireccion = (e) => this.updateAssetExtraField('direccion', e.target.value);
+  onAssetFieldProvincia = (e) => this.updateAssetExtraField('provincia', e.target.value);
+  onAssetFieldLocalidad = (e) => this.updateAssetExtraField('localidad', e.target.value);
+  onAssetFieldCodigoPostal = (e) => this.updateAssetExtraField('codigoPostal', e.target.value);
+  onAssetFieldM2 = (e) => this.updateAssetExtraField('m2', e.target.value);
+  onAssetFieldValorLearisk = (e) => this.updateAssetExtraField('valorLearisk', e.target.value);
+  onAssetFieldTipoCobertura = (e) => this.updateAssetExtraField('tipoCobertura', e.target.value);
+  onAssetFieldCantPisos = (e) => this.updateAssetExtraField('cantPisos', e.target.value);
+  onAssetFieldCantUF = (e) => this.updateAssetExtraField('cantUF', e.target.value);
+  onAssetFieldCantAscensores = (e) => this.updateAssetExtraField('cantAscensores', e.target.value);
+  onAssetFieldCantTermotanques = (e) => this.updateAssetExtraField('cantTermotanques', e.target.value);
+  onAssetFieldCantLocales = (e) => this.updateAssetExtraField('cantLocales', e.target.value);
+  onAssetFieldCantEstacionamientos = (e) => this.updateAssetExtraField('cantEstacionamientos', e.target.value);
+  onAssetFieldSumaAsegurada = (e) => this.updateAssetMoneyField('sumaAsegurada', e.target.value);
+  onAssetFieldPrima = (e) => this.updateAssetMoneyField('prima', e.target.value);
+  onAssetFieldVigenciaDesde = (e) => this.setState({ assetForm: { ...this.state.assetForm, vigenciaDesde: e.target.value } });
+  onAssetFieldVigenciaHasta = (e) => this.setState({ assetForm: { ...this.state.assetForm, vigenciaHasta: e.target.value } });
+  updateAssetExtraField = (key, value) => this.setState({ assetForm: { ...this.state.assetForm, [key]: value } });
+  updateAssetMoneyField = (key, rawValue) => {
+    const digits = rawValue.replace(/\D/g, '');
+    const formatted = digits ? Number(digits).toLocaleString('es-AR') : '';
+    this.setState({ assetForm: { ...this.state.assetForm, [key]: formatted } });
+  };
+
+  saveAsset = () => {
+    const typeKey = this.state.activeTab;
+    const f = this.state.assetForm;
+    if (this.state.editingQuoteId) {
+      const quoteId = this.state.editingQuoteId;
+      if (f.esNuestra) {
+        const clients = this.state.clients.map(c => {
+          if (c.id !== this.state.selectedClientId) return c;
+          const bienes = { ...c.bienes, [typeKey]: [...(c.bienes[typeKey] || []), { ...f, id: uid() }] };
+          return { ...c, bienes, cotizacionesRiesgos: (c.cotizacionesRiesgos || []).filter(q => q.id !== quoteId) };
+        });
+        this.setState({ clients, showAssetModal: false, editingQuoteId: null });
+        return;
+      }
+      const clients = this.state.clients.map(c => {
+        if (c.id !== this.state.selectedClientId) return c;
+        const registro = { id: quoteId, typeKey, fecha: f.fechaCotizacion || TODAY.toISOString().slice(0, 10),
+          bien: [f.tipoVehiculo, f.marca, f.modelo].filter(Boolean).join(' '), aseguradora: f.aseguradora,
+          costo: Number((f.prima || f.sumaAsegurada || '0').toString().replace(/\D/g, '')) || 0, estado: f.estadoCotizacion };
+        return { ...c, cotizacionesRiesgos: c.cotizacionesRiesgos.map(q => q.id === quoteId ? registro : q) };
+      });
+      this.setState({ clients, showAssetModal: false, editingQuoteId: null });
+      return;
+    }
+    if (['auto', 'inmueble', 'negocio', 'consorcio'].includes(typeKey) && !this.state.editingAssetId && !f.esNuestra) {
+      const clients = this.state.clients.map(c => {
+        if (c.id !== this.state.selectedClientId) return c;
+        const registro = { id: uid(), typeKey, fecha: f.fechaCotizacion || TODAY.toISOString().slice(0, 10),
+          bien: [f.tipoVehiculo, f.marca, f.modelo].filter(Boolean).join(' '), aseguradora: f.aseguradora,
+          costo: Number((f.prima || f.sumaAsegurada || '0').toString().replace(/\D/g, '')) || 0, estado: f.estadoCotizacion };
+        return { ...c, cotizacionesRiesgos: [registro, ...(c.cotizacionesRiesgos || [])] };
+      });
+      this.setState({ clients, showAssetModal: false });
+      return;
+    }
+    const clients = this.state.clients.map(c => {
+      if (c.id !== this.state.selectedClientId) return c;
+      const list = c.bienes[typeKey] || [];
+      let newList;
+      if (this.state.editingAssetId) {
+        newList = list.map(a => a.id === this.state.editingAssetId ? { ...f, id: a.id } : a);
+      } else {
+        newList = [...list, { ...f, id: uid() }];
+      }
+      return { ...c, bienes: { ...c.bienes, [typeKey]: newList } };
+    });
+    this.setState({ clients, showAssetModal: false });
+  };
+  deleteAsset = (typeKey, assetId) => {
+    if (!window.confirm('¿Eliminar este bien? Se moverá a Bienes Anteriores.')) return;
+    const clients = this.state.clients.map(c => {
+      if (c.id !== this.state.selectedClientId) return c;
+      const removed = (c.bienes[typeKey] || []).find(a => a.id === assetId);
+      const bienesAnteriores = removed ? [...(c.bienesAnteriores || []), { ...removed, typeKey, eliminadoEl: TODAY.toISOString().slice(0, 10) }] : (c.bienesAnteriores || []);
+      return { ...c, bienes: { ...c.bienes, [typeKey]: (c.bienes[typeKey] || []).filter(a => a.id !== assetId) }, bienesAnteriores };
+    });
+    this.setState({ clients });
+  };
+
+  openNewSiniestroDialog = () => {
+    this.setState({ siniestroForm: { fecha: '', tipo: 'auto', estado: 'Abierto', descripcion: '' } });
+    this.setState({ showSiniestroModal: true });
+  };
+  closeSiniestroDialog = () => this.setState({ showSiniestroModal: false });
+  onSiniestroFieldFecha = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, fecha: e.target.value } });
+  onSiniestroFieldTipo = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, tipo: e.target.value } });
+  onSiniestroFieldEstado = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, estado: e.target.value } });
+  onSiniestroFieldDescripcion = (e) => this.setState({ siniestroForm: { ...this.state.siniestroForm, descripcion: e.target.value } });
+  saveSiniestro = () => {
+    const f = this.state.siniestroForm;
+    if (!f.fecha) return;
+    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, siniestros: [{ ...f, id: uid() }, ...c.siniestros] } : c);
+    this.setState({ clients, showSiniestroModal: false });
+  };
+  deleteSiniestro = (id) => {
+    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, siniestros: c.siniestros.filter(s => s.id !== id) } : c);
+    this.setState({ clients });
+  };
+
+  openNewDocDialog = () => {
+    this.setState({ docForm: { nombre: '', tipo: '' } });
+    this.setState({ showDocModal: true });
+  };
+
+  openQuoteSearchDialog = () => this.setState({ quoteSearchDialogOpen: true, quoteSearch: '' });
+  closeQuoteSearchDialog = () => this.setState({ quoteSearchDialogOpen: false });
+  onQuoteSearchChange = (e) => this.setState({ quoteSearch: e.target.value });
+  openPolizasModal = () => this.setState({ showPolizasModal: true });
+  closePolizasModal = () => this.setState({ showPolizasModal: false });
+  openVencimientosModal = () => this.setState({ showVencimientosModal: true });
+  closeVencimientosModal = () => this.setState({ showVencimientosModal: false });
+  openSiniestrosModal = () => this.setState({ showSiniestrosModal: true });
+  closeSiniestrosModal = () => this.setState({ showSiniestrosModal: false });
+  openCotizacionesModal = () => this.setState({ showCotizacionesModal: true });
+  closeCotizacionesModal = () => this.setState({ showCotizacionesModal: false });
+  goToClientQuote = (client, q) => {
+    const match = (client.cotizacionesRiesgos || []).find(cq => cq.bien === q.bien && cq.aseguradora === q.aseguradora && cq.fecha === q.fecha);
+    this.setState({ showCotizacionesModal: false });
+    if (match) { this.selectClient(client.id, 'cotizaciones'); this.openEditQuote(match); }
+    else this.selectClient(client.id, 'cotizaciones');
+  };
+  openNewClientFromQuote = () => this.setState({ quoteSearchDialogOpen: false, clientDialogOpen: true, editingClientId: null, clientForm: emptyClientForm() });
+  closeDocDialog = () => this.setState({ showDocModal: false });
+  onDocFieldNombre = (e) => this.setState({ docForm: { ...this.state.docForm, nombre: e.target.value } });
+  onDocFieldTipo = (e) => this.setState({ docForm: { ...this.state.docForm, tipo: e.target.value } });
+  saveDoc = () => {
+    const f = this.state.docForm;
+    if (!f.nombre) return;
+    const fecha = TODAY.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, documentos: [{ ...f, id: uid(), fecha }, ...c.documentos] } : c);
+    this.setState({ clients, showDocModal: false });
+  };
+  deleteDoc = (id) => {
+    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, documentos: c.documentos.filter(d => d.id !== id) } : c);
+    this.setState({ clients });
+  };
+
+  onNewNoteChange = (e) => this.setState({ newNote: e.target.value });
+  addNote = () => {
+    if (!this.state.newNote.trim()) return;
+    const date = TODAY.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const clients = this.state.clients.map(c => c.id === this.state.selectedClientId ? { ...c, notas: [{ id: uid(), author: 'Usuario', date, text: this.state.newNote }, ...c.notas] } : c);
+    this.setState({ clients, newNote: '' });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const clients = s.clients;
+    const allAssetsFlat = [];
+    clients.forEach(c => ASSET_TYPES.forEach(t => (c.bienes[t.key] || []).forEach(a => allAssetsFlat.push({ client: c, typeKey: t.key, asset: a }))));
+
+    const totalClientes = clients.length;
+    let polizasActivas = 0, porVencer = 0;
+    allAssetsFlat.forEach(({ asset }) => {
+      const { estado } = estadoFor(asset.vigenciaHasta);
+      if (estado !== 'Vencida') polizasActivas++;
+      if (estado === 'Por vencer') porVencer++;
+    });
+    const siniestrosAbiertos = clients.reduce((n, c) => n + c.siniestros.filter(s => s.estado !== 'Cerrado').length, 0);
+
+    const upcomingExpirations = allAssetsFlat
+      .map(({ client, typeKey, asset }) => {
+        const { estado, tagClass } = estadoFor(asset.vigenciaHasta);
+        return { client, typeKey, asset, estado, tagClass, diff: new Date(asset.vigenciaHasta + 'T00:00:00') - TODAY };
+      })
+      .filter(r => r.estado !== 'Vencida' && r.diff <= 60 * 86400000)
+      .sort((a, b) => a.diff - b.diff)
+      .slice(0, 8)
+      .map(r => ({
+        clienteNombre: nombreCompleto(r.client),
+        nPoliza: r.asset.nPoliza || '—',
+        aseguradora: r.asset.aseguradora,
+        vigenciaHasta: fmtDate(r.asset.vigenciaHasta),
+        estado: r.estado,
+        tagClass: r.tagClass,
+        onClick: () => this.selectClient(r.client.id, r.typeKey),
+      }));
+
+    const allAssetsScored = allAssetsFlat.map(({ client, typeKey, asset }) => {
+      const { estado, tagClass } = estadoFor(asset.vigenciaHasta);
+      return { client, typeKey, asset, estado, tagClass, diff: new Date(asset.vigenciaHasta + 'T00:00:00') - TODAY };
+    });
+    const polizasVigentesRows = allAssetsScored
+      .filter(r => r.estado !== 'Vencida')
+      .sort((a, b) => a.diff - b.diff)
+      .map(r => ({ clienteNombre: nombreCompleto(r.client), tipoLabel: (assetTypeByKey(r.typeKey) || {}).label || r.typeKey,
+        nPoliza: r.asset.nPoliza || '—', aseguradora: r.asset.aseguradora || '—', vigenciaHasta: fmtDate(r.asset.vigenciaHasta), estado: r.estado, tagClass: r.tagClass }));
+    const vencimientos30Rows = allAssetsScored
+      .filter(r => r.estado !== 'Vencida' && r.diff <= 30 * 86400000)
+      .sort((a, b) => a.diff - b.diff)
+      .map(r => ({ clienteNombre: nombreCompleto(r.client), tipoLabel: (assetTypeByKey(r.typeKey) || {}).label || r.typeKey,
+        nPoliza: r.asset.nPoliza || '—', aseguradora: r.asset.aseguradora || '—', vigenciaHasta: fmtDate(r.asset.vigenciaHasta), estado: r.estado, tagClass: r.tagClass,
+        onClick: () => { this.setState({ showVencimientosModal: false }); this.selectClient(r.client.id, r.typeKey); } }));
+    const siniestrosActivosRows = clients.flatMap(c => c.siniestros.filter(sn => sn.estado !== 'Cerrado').map(sn => ({
+      clienteNombre: nombreCompleto(c), fecha: fmtDate(sn.fecha), tipoLabel: (assetTypeByKey(sn.tipo) || {}).label || sn.tipo,
+      estado: sn.estado, tagClass: sn.estado === 'Abierto' ? 'tag-accent' : 'tag-outline', descripcion: sn.descripcion,
+      onClick: () => { this.setState({ showSiniestrosModal: false }); this.selectClient(c.id, 'siniestros'); },
+    })));
+
+    const taskListRows = s.taskLists.map(l => ({ id: l.id, nombre: l.nombre, pendientes: l.tareas.filter(t => !t.hecha).length, btnClass: 'btn ' + (l.id === s.activeTaskListId ? 'btn-primary' : 'btn-ghost'), onClick: () => this.selectTaskList(l.id) }));
+    const activeTaskList = s.taskLists.find(l => l.id === s.activeTaskListId) || s.taskLists[0];
+    const taskRows = activeTaskList ? activeTaskList.tareas.map(t => ({
+      id: t.id, texto: t.texto, hecha: t.hecha, recordatorio: t.recordatorio ? fmtDate(t.recordatorio) : '',
+      textStyle: t.hecha ? 'text-decoration:line-through; opacity:0.55;' : '',
+      onToggle: () => this.toggleTask(t.id), onDelete: () => this.deleteTask(t.id), onOpen: () => this.openTaskDetail(t.id),
+    })) : [];
+    const taskDetail = activeTaskList ? activeTaskList.tareas.find(t => t.id === s.taskDetailId) : null;
+    const asignadoUser = taskDetail && taskDetail.asignadoA ? userById(taskDetail.asignadoA) : null;
+    const taskDetailStepRows = taskDetail ? taskDetail.pasos.map(p => ({ id: p.id, texto: p.texto, hecha: p.hecha, textStyle: p.hecha ? 'text-decoration:line-through; opacity:0.55;' : '', onToggle: () => this.toggleStep(p.id) })) : [];
+    const userOptions = USERS.map(u => ({ id: u.id, nombre: u.nombre }));
+
+    const qSearch = s.quoteSearch.trim().toLowerCase();
+    const quoteSearchResults = qSearch ? clients.filter(c =>
+      nombreCompleto(c).toLowerCase().includes(qSearch) ||
+      c.dni.toLowerCase().includes(qSearch) ||
+      (c.razonSocial || '').toLowerCase().includes(qSearch)
+    ).map(c => ({ nombre: nombreCompleto(c), tipoDocumento: c.tipoDocumento, dni: c.dni, onClick: () => this.setState({ quoteSearchDialogOpen: false }, () => this.selectClient(c.id)) })) : [];
+
+    const recentQuotes = [...s.cotizaciones]
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .slice(0, 8)
+      .map(q => ({ clienteNombre: q.clienteNombre, bien: q.bien, aseguradora: q.aseguradora, costo: '$' + Number(q.costo).toLocaleString('es-AR'), fecha: fmtDate(q.fecha), estado: q.estado, tagClass: quoteTagClass(q.estado) }));
+
+    const cotizaciones30Rows = s.cotizaciones
+      .filter(q => (TODAY - new Date(q.fecha + 'T00:00:00')) <= 30 * 86400000)
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .map(q => ({ clienteNombre: q.clienteNombre, bien: q.bien, aseguradora: q.aseguradora, costo: '$' + Number(q.costo).toLocaleString('es-AR'), fecha: fmtDate(q.fecha), estado: q.estado, tagClass: quoteTagClass(q.estado),
+        onClick: () => { const client = clients.find(c => nombreCompleto(c) === q.clienteNombre); if (client) this.goToClientQuote(client, q); else this.setState({ showCotizacionesModal: false }); } }));
+
+    const search = s.search.trim().toLowerCase();
+    const filteredClients = clients.filter(c => !search || nombreCompleto(c).toLowerCase().includes(search) || c.dni.includes(search));
+    const clientRows = filteredClients.map(c => {
+      const bienesCount = ASSET_TYPES.reduce((n, t) => n + (c.bienes[t.key] || []).length, 0);
+      const activas = ASSET_TYPES.reduce((n, t) => n + (c.bienes[t.key] || []).filter(a => estadoFor(a.vigenciaHasta).estado !== 'Vencida').length, 0);
+      return { nombre: nombreCompleto(c), dni: c.dni, contacto: c.telefono, bienesCount, polizasActivas: activas, actualizado: c.actualizado, onClick: () => this.selectClient(c.id) };
+    });
+
+    const selectedClient = clients.find(c => c.id === s.selectedClientId) || clients[0] || null;
+
+    const tabs = [{ key: 'resumen', label: 'Resumen' }, { key: 'cotizaciones', label: 'Cotizaciones' }, ...ASSET_TYPES.map(t => ({ key: t.key, label: t.label })), { key: 'anteriores', label: 'Bienes Anteriores' }, { key: 'siniestros', label: 'Siniestros' }, { key: 'documentos', label: 'Documentos' }, { key: 'notas', label: 'Notas' }]
+      .map(t => ({ ...t, btnClass: 'btn ' + (t.key === s.activeTab ? 'btn-primary' : 'btn-secondary'), onClick: () => this.setState({ activeTab: t.key }) }));
+
+    const resumenCounts = selectedClient ? [
+      ...ASSET_TYPES.map(t => ({ label: t.label, count: (selectedClient.bienes[t.key] || []).length })),
+      { label: 'Siniestros', count: selectedClient.siniestros.length },
+      { label: 'Documentos', count: selectedClient.documentos.length },
+      { label: 'Notas', count: selectedClient.notas.length },
+    ] : [];
+
+    const clientAssetsFlat = selectedClient ? ASSET_TYPES.flatMap(t => (selectedClient.bienes[t.key] || []).map(a => ({ typeKey: t.key, typeLabel: t.label, asset: a }))) : [];
+    const clientRiesgosVigentes = clientAssetsFlat
+      .map(({ typeKey, typeLabel, asset }) => {
+        const { estado, tagClass } = estadoFor(asset.vigenciaHasta);
+        return { tipoLabel: typeLabel, aseguradora: asset.aseguradora || '—', nPoliza: asset.nPoliza || '—', vigenciaHasta: fmtDate(asset.vigenciaHasta), estado, tagClass, onClick: () => this.setState({ activeTab: typeKey }) };
+      })
+      .filter(r => r.estado !== 'Vencida');
+    const clientProximosVencimientos = clientAssetsFlat
+      .map(({ typeKey, typeLabel, asset }) => {
+        const { estado, tagClass } = estadoFor(asset.vigenciaHasta);
+        const diff = new Date(asset.vigenciaHasta + 'T00:00:00') - TODAY;
+        return { nPoliza: asset.nPoliza || '—', aseguradora: asset.aseguradora || '—', vigenciaHasta: fmtDate(asset.vigenciaHasta), estado, tagClass, diff, onClick: () => this.setState({ activeTab: typeKey }) };
+      })
+      .filter(r => r.estado !== 'Vencida' && r.diff <= 60 * 86400000)
+      .sort((a, b) => a.diff - b.diff);
+    const clientCotizaciones = selectedClient ? s.cotizaciones
+      .filter(q => q.clienteNombre === nombreCompleto(selectedClient))
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .map(q => ({ bien: q.bien, aseguradora: q.aseguradora, costo: '$' + Number(q.costo).toLocaleString('es-AR'), fecha: fmtDate(q.fecha), estado: q.estado, tagClass: quoteTagClass(q.estado) })) : [];
+
+    const bienesAnterioresRows = selectedClient ? (selectedClient.bienesAnteriores || []).map(a => ({
+      tipoLabel: (assetTypeByKey(a.typeKey) || {}).label || a.typeKey,
+      titulo: tituloFor(a.typeKey, a),
+      aseguradora: a.aseguradora || '—',
+      nPoliza: a.nPoliza || '—',
+      vigenciaHasta: fmtDate(a.vigenciaHasta),
+      eliminadoEl: fmtDate(a.eliminadoEl),
+    })) : [];
+
+    const cotizacionesClienteRows = selectedClient ? [...(selectedClient.cotizacionesRiesgos || [])]
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .map(q => ({ tipoLabel: (assetTypeByKey(q.typeKey) || {}).label || q.typeKey, bien: q.bien, aseguradora: q.aseguradora,
+        costo: '$' + Number(q.costo).toLocaleString('es-AR'), fecha: fmtDate(q.fecha), estado: q.estado, tagClass: quoteTagClass(q.estado),
+        onEdit: () => this.openEditQuote(q) })) : [];
+
+    const currentType = assetTypeByKey(s.activeTab);
+    const currentAssets = (selectedClient && currentType) ? (selectedClient.bienes[currentType.key] || []).map(a => {
+      const { estado, tagClass } = estadoFor(a.vigenciaHasta);
+      const fieldRows = [
+        { label: 'N° póliza', value: a.nPoliza || '—' },
+        { label: 'Vigencia', value: fmtDate(a.vigenciaDesde) + ' – ' + fmtDate(a.vigenciaHasta) },
+        { label: 'Suma asegurada', value: a.sumaAsegurada ? '$' + Number(a.sumaAsegurada).toLocaleString('es-AR') : '—' },
+        { label: 'Prima', value: a.prima ? '$' + Number(a.prima).toLocaleString('es-AR') : '—' },
+        ...currentType.fields.map(f => ({ label: f.l, value: a[f.k] || '—' })),
+      ];
+      return { titulo: tituloFor(currentType.key, a), aseguradora: a.aseguradora || 'Sin aseguradora', estado, tagClass, fieldRows,
+        onEdit: () => this.openEditAsset(currentType.key, a), onDelete: () => this.deleteAsset(currentType.key, a.id) };
+    }) : [];
+
+    const extraFieldsForForm = currentType ? currentType.fields.map(f => ({
+      key: f.k, label: f.l, inputType: f.t, value: s.assetForm[f.k] || '',
+      onChange: (e) => this.updateAssetExtraField(f.k, e.target.value),
+    })) : [];
+
+    const siniestroTipoOptions = ASSET_TYPES.map(t => ({ value: t.key, label: t.label }));
+    const siniestrosRows = selectedClient ? selectedClient.siniestros.map(sn => ({
+      fecha: fmtDate(sn.fecha), tipoLabel: (assetTypeByKey(sn.tipo) || {}).label || sn.tipo,
+      estado: sn.estado, tagClass: sn.estado === 'Cerrado' ? 'tag-neutral' : (sn.estado === 'Abierto' ? 'tag-accent' : 'tag-outline'),
+      descripcion: sn.descripcion, onDelete: () => this.deleteSiniestro(sn.id),
+    })) : [];
+
+    const documentRows = selectedClient ? selectedClient.documentos.map(d => ({ ...d, onDelete: () => this.deleteDoc(d.id) })) : [];
+    const noteRows = selectedClient ? selectedClient.notas : [];
+
+    return {
+      isDashboard: s.view === 'dashboard', isClients: s.view === 'clients', isClientDetail: s.view === 'clientDetail' && !!selectedClient, isTasks: s.view === 'tasks',
+      navDashboardBtnClass: 'btn ' + (s.view === 'dashboard' ? 'btn-primary' : 'btn-secondary'),
+      navClientsBtnClass: 'btn ' + ((s.view === 'clients' || s.view === 'clientDetail') ? 'btn-primary' : 'btn-secondary'),
+      navTasksBtnClass: 'btn ' + (s.view === 'tasks' ? 'btn-primary' : 'btn-secondary'),
+      goDashboard: this.goDashboard, goClients: this.goClients, goTasks: this.goTasks,
+      metrics: { totalClientes, polizasActivas, porVencer, siniestrosAbiertos },
+      upcomingExpirations, noExpirations: upcomingExpirations.length === 0,
+      openPolizasModal: this.openPolizasModal, closePolizasModal: this.closePolizasModal, showPolizasModal: s.showPolizasModal, polizasVigentesRows, noPolizasVigentes: polizasVigentesRows.length === 0,
+      openVencimientosModal: this.openVencimientosModal, closeVencimientosModal: this.closeVencimientosModal, showVencimientosModal: s.showVencimientosModal, vencimientos30Rows, noVencimientos30: vencimientos30Rows.length === 0,
+      openSiniestrosModal: this.openSiniestrosModal, closeSiniestrosModal: this.closeSiniestrosModal, showSiniestrosModal: s.showSiniestrosModal, siniestrosActivosRows, noSiniestrosActivos: siniestrosActivosRows.length === 0,
+      openCotizacionesModal: this.openCotizacionesModal, closeCotizacionesModal: this.closeCotizacionesModal, showCotizacionesModal: s.showCotizacionesModal, cotizaciones30Rows, noCotizaciones30: cotizaciones30Rows.length === 0,
+      recentQuotes, noQuotes: recentQuotes.length === 0,
+      search: s.search, onSearchChange: this.onSearchChange, filteredClientsCount: clientRows.length, clientRows, noClients: clientRows.length === 0,
+      openNewClientDialog: this.openNewClientDialog, openEditClientDialog: this.openEditClientDialog,
+      quoteSearchDialogOpen: s.quoteSearchDialogOpen, quoteSearch: s.quoteSearch, onQuoteSearchChange: this.onQuoteSearchChange,
+      openQuoteSearchDialog: this.openQuoteSearchDialog, closeQuoteSearchDialog: this.closeQuoteSearchDialog, openNewClientFromQuote: this.openNewClientFromQuote,
+      quoteSearchResults, noQuoteSearchResults: !!qSearch && quoteSearchResults.length === 0,
+      taskListRows, activeTaskListName: activeTaskList ? activeTaskList.nombre : '', taskRows, noTasks: taskRows.length === 0,
+      newTaskText: s.newTaskText, onNewTaskTextChange: this.onNewTaskTextChange, addTask: this.addTask,
+      newListName: s.newListName, onNewListNameChange: this.onNewListNameChange, addTaskList: this.addTaskList,
+      taskDetailOpen: s.taskDetailOpen && !!taskDetail, closeTaskDetail: this.closeTaskDetail, taskDetail: taskDetail || {},
+      asignadoUserNombre: asignadoUser ? asignadoUser.nombre : '', asignadoUserIniciales: asignadoUser ? asignadoUser.iniciales : '',
+      hasAsignado: !!asignadoUser,
+      taskDetailStepRows, noTaskDetailSteps: taskDetailStepRows.length === 0,
+      newStepText: s.newStepText, onNewStepTextChange: this.onNewStepTextChange, addStep: this.addStep,
+      userOptions,
+      onTaskMiDia: () => this.updateTaskField('miDia', !taskDetail.miDia),
+      onTaskHoraAviso: (e) => this.updateTaskField('horaAviso', e.target.value),
+      onTaskVence: (e) => this.updateTaskField('vence', e.target.value),
+      onTaskRepetir: () => this.updateTaskField('repetir', !taskDetail.repetir),
+      onTaskAsignado: (e) => this.updateTaskField('asignadoA', e.target.value),
+      onTaskArchivo: (e) => this.updateTaskField('archivo', e.target.value),
+      onTaskNota: (e) => this.updateTaskField('nota', e.target.value),
+      clearHoraAviso: () => this.updateTaskField('horaAviso', ''),
+      clearVence: () => this.updateTaskField('vence', ''),
+      clearAsignado: () => this.updateTaskField('asignadoA', ''),
+      selectedClient: selectedClient ? { ...selectedClient, nombre: nombreCompleto(selectedClient),
+        direccionCompleta: [selectedClient.direccion, selectedClient.localidad, selectedClient.provincia, selectedClient.codigoPostal ? ('CP ' + selectedClient.codigoPostal) : ''].filter(Boolean).join(', ') }
+        : { nombre: '', tipoDocumento: 'DNI', dni: '', telefono: '', email: '', direccionCompleta: '' },
+      tabs, isResumenTab: s.activeTab === 'resumen', resumenCounts,
+      isCotizacionesTab: s.activeTab === 'cotizaciones', cotizacionesClienteRows, noCotizacionesCliente: cotizacionesClienteRows.length === 0,
+      isAutoTab: s.activeTab === 'auto', isInmuebleTab: s.activeTab === 'inmueble' || s.activeTab === 'negocio' || s.activeTab === 'consorcio',
+      isNegocioTab: s.activeTab === 'negocio', isNegocioTabInverse: s.activeTab !== 'negocio',
+      isConsorcioTab: s.activeTab === 'consorcio', isConsorcioTabInverse: s.activeTab !== 'consorcio',
+      isInmuebleTabPlain: s.activeTab === 'inmueble',
+      isNonAutoAssetTab: !!currentType && s.activeTab !== 'auto' && s.activeTab !== 'inmueble' && s.activeTab !== 'negocio' && s.activeTab !== 'consorcio',
+      onAssetFieldOperacion: (e) => this.updateAssetExtraField('operacion', e.target.value),
+      onAssetFieldTipoVehiculo: (e) => this.updateAssetExtraField('tipoVehiculo', e.target.value),
+      onAssetFieldFechaCotizacion: (e) => this.updateAssetExtraField('fechaCotizacion', e.target.value),
+      onAssetFieldEstadoCotizacion: (e) => this.updateAssetExtraField('estadoCotizacion', e.target.value),
+      onAssetFieldEsNuestra: () => this.updateAssetExtraField('esNuestra', !s.assetForm.esNuestra),
+      onAssetFieldFormaPago: (e) => this.updateAssetExtraField('formaPago', e.target.value),
+      onAssetFieldVencimientoPagoDia: (e) => this.updateAssetExtraField('vencimientoPagoDia', e.target.value),
+      onAssetFieldVencimientoPagoMes: (e) => this.updateAssetExtraField('vencimientoPagoMes', e.target.value),
+      diaOptions: Array.from({ length: 31 }, (_, i) => String(i + 1)),
+      mesOptions: [['1','Enero'],['2','Febrero'],['3','Marzo'],['4','Abril'],['5','Mayo'],['6','Junio'],['7','Julio'],['8','Agosto'],['9','Septiembre'],['10','Octubre'],['11','Noviembre'],['12','Diciembre']].map(([value,label])=>({value,label})),
+      onAssetFieldMarca: (e) => this.updateAssetExtraField('marca', e.target.value),
+      onAssetFieldModelo: (e) => this.updateAssetExtraField('modelo', e.target.value),
+      onAssetFieldAnio: (e) => this.updateAssetExtraField('anio', e.target.value),
+      onAssetFieldPatente: (e) => this.updateAssetExtraField('patente', e.target.value),
+      onAssetFieldNChasis: (e) => this.updateAssetExtraField('nChasis', e.target.value),
+      onAssetFieldNMotor: (e) => this.updateAssetExtraField('nMotor', e.target.value),
+      onAssetFieldMonedaSuma: (e) => this.updateAssetExtraField('monedaSuma', e.target.value),
+      onAssetFieldMonedaPrima: (e) => this.updateAssetExtraField('monedaPrima', e.target.value),
+      onAssetFieldTipoInmueble: this.onAssetFieldTipoInmueble, onAssetFieldDireccion: this.onAssetFieldDireccion,
+      onAssetFieldProvincia: this.onAssetFieldProvincia, onAssetFieldLocalidad: this.onAssetFieldLocalidad,
+      onAssetFieldCodigoPostal: this.onAssetFieldCodigoPostal, onAssetFieldM2: this.onAssetFieldM2,
+      onAssetFieldValorLearisk: this.onAssetFieldValorLearisk, onAssetFieldTipoCobertura: this.onAssetFieldTipoCobertura,
+      clientRiesgosVigentes, noRiesgosVigentes: clientRiesgosVigentes.length === 0,
+      clientProximosVencimientos, noProximosVencimientosCliente: clientProximosVencimientos.length === 0,
+      clientCotizaciones, noClientCotizaciones: clientCotizaciones.length === 0,
+      isAssetTab: !!currentType, activeTabLabel: currentType ? currentType.label : '', currentAssets, noAssets: currentAssets.length === 0,
+      isSiniestrosTab: s.activeTab === 'siniestros', siniestrosRows, noSiniestros: siniestrosRows.length === 0, openNewSiniestroDialog: this.openNewSiniestroDialog,
+      isDocumentosTab: s.activeTab === 'documentos', documentRows, noDocuments: documentRows.length === 0, openNewDocDialog: this.openNewDocDialog,
+      isNotasTab: s.activeTab === 'notas', newNote: s.newNote, onNewNoteChange: this.onNewNoteChange, addNote: this.addNote, noteRows, noNotes: noteRows.length === 0,
+      isAnterioresTab: s.activeTab === 'anteriores', bienesAnteriores: bienesAnterioresRows, noBienesAnteriores: bienesAnterioresRows.length === 0,
+      stopProp: this.stopProp,
+      clientDialogOpen: s.clientDialogOpen, clientDialogTitle: s.editingClientId ? 'Editar cliente' : 'Nuevo cliente', clientForm: s.clientForm,
+      closeClientDialog: this.closeClientDialog, saveClient: this.saveClient,
+      onClientFieldApellido: this.onClientFieldApellido, onClientFieldNombre: this.onClientFieldNombre, onClientFieldTipoDocumento: this.onClientFieldTipoDocumento, onClientFieldCondicionFiscal: this.onClientFieldCondicionFiscal, onClientFieldDni: this.onClientFieldDni, onClientFieldTelefono: this.onClientFieldTelefono,
+      onClientFieldEmail: this.onClientFieldEmail, onClientFieldDireccion: this.onClientFieldDireccion,
+      onClientFieldFechaNacimiento: this.onClientFieldFechaNacimiento, onClientFieldProvincia: this.onClientFieldProvincia, onClientFieldLocalidad: this.onClientFieldLocalidad, onClientFieldCodigoPostal: this.onClientFieldCodigoPostal,
+      provinciaOptions: PROVINCIAS, aseguradoraOptions: ASEGURADORAS,
+      showAssetModal: s.showAssetModal, assetDialogTitle: (s.editingQuoteId ? 'Editar Cotización' : (s.editingAssetId ? 'Editar ' : 'Agregar ') + (currentType ? currentType.singular : '')), assetForm: s.assetForm,
+      closeAssetDialog: this.closeAssetDialog, saveAsset: this.saveAsset, extraFieldsForForm,
+      onAssetFieldAseguradora: this.onAssetFieldAseguradora, onAssetFieldNPoliza: this.onAssetFieldNPoliza, onAssetFieldSumaAsegurada: this.onAssetFieldSumaAsegurada,
+      onAssetFieldPrima: this.onAssetFieldPrima, onAssetFieldVigenciaDesde: this.onAssetFieldVigenciaDesde, onAssetFieldVigenciaHasta: this.onAssetFieldVigenciaHasta,
+      openNewAssetDialog: this.openNewAssetDialog, openNewQuoteDialog: this.openNewQuoteDialog,
+      showQuoteTypeModal: s.showQuoteTypeModal, quoteTypeChoice: s.quoteTypeChoice, onQuoteTypeChoiceChange: this.onQuoteTypeChoiceChange,
+      closeQuoteTypeModal: this.closeQuoteTypeModal, continueToQuoteForm: this.continueToQuoteForm,
+      riskTypeOptions: ASSET_TYPES.map(t => ({ key: t.key, label: t.label })),
+      showSiniestroModal: s.showSiniestroModal, siniestroForm: s.siniestroForm, closeSiniestroDialog: this.closeSiniestroDialog, saveSiniestro: this.saveSiniestro,
+      onSiniestroFieldFecha: this.onSiniestroFieldFecha, onSiniestroFieldTipo: this.onSiniestroFieldTipo, onSiniestroFieldEstado: this.onSiniestroFieldEstado, onSiniestroFieldDescripcion: this.onSiniestroFieldDescripcion,
+      siniestroTipoOptions,
+      showDocModal: s.showDocModal, docForm: s.docForm, closeDocDialog: this.closeDocDialog, saveDoc: this.saveDoc,
+      onDocFieldNombre: this.onDocFieldNombre, onDocFieldTipo: this.onDocFieldTipo,
+    };
+  }
+}
+
+</script>
+
+
+</sc-if></div>
+</x-dc>
+</body>
+</html>
