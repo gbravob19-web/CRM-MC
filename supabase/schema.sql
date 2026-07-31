@@ -39,6 +39,7 @@ create trigger on_auth_user_created
 -- ── clients ─────────────────────────────────────────────────────────────────
 create table if not exists clients (
   id uuid primary key default gen_random_uuid(),
+  productor text not null default '',
   apellido text not null,
   nombre text not null,
   tipo_documento text not null default 'DNI',
@@ -54,6 +55,8 @@ create table if not exists clients (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Safe to re-run on a database created before the "productor" field existed.
+alter table clients add column if not exists productor text not null default '';
 
 -- ── policies (bienes / pólizas, por categoría) ───────────────────────────────
 -- type_key: 'auto' | 'inmueble' | 'negocio' | 'consorcio' | 'vidaSalud' | 'art' | 'ap' | 'caucion' | 'tecnico'

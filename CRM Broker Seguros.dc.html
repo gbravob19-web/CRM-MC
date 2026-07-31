@@ -689,6 +689,9 @@
         <div>
           <h1 style="margin-bottom:var(--space-1);">{{ selectedClient.nombre }}</h1>
           <p class="text-muted" style="margin:0;">{{ selectedClient.tipoDocumento }} {{ selectedClient.dni }} · {{ selectedClient.condicionFiscal }}</p>
+          <sc-if value="{{ selectedClient.productor }}" hint-placeholder-val="{{ false }}">
+            <p class="text-muted" style="margin:4px 0 0;">Productor: {{ selectedClient.productor }}</p>
+          </sc-if>
           <p class="text-muted" style="margin:4px 0 0;">Teléfono: {{ selectedClient.telefono }} · Email: {{ selectedClient.email }}</p>
           <p class="text-muted" style="margin:4px 0 0;">{{ selectedClient.direccionCompleta }}</p>
         </div>
@@ -1087,6 +1090,15 @@
     <div class="dialog-backdrop" sc-camel-on-click="{{ closeClientDialog }}" style="z-index:100;">
       <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg);">
         <div class="dialog-title">{{ clientDialogTitle }}</div>
+        <div class="field">
+          <label>Productor</label>
+          <sc-raw-select class="input" value="{{ clientForm.productor }}" sc-camel-on-change="{{ onClientFieldProductor }}">
+            <option value="">Seleccionar...</option>
+            <sc-for list="{{ productorOptions }}" as="p" hint-placeholder-count="5">
+              <option value="{{ p }}">{{ p }}</option>
+            </sc-for>
+          </sc-raw-select>
+        </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
           <div class="field"><label>Apellido</label><input class="input" type="text" value="{{ clientForm.apellido }}" sc-camel-on-change="{{ onClientFieldApellido }}"></div>
           <div class="field"><label>Nombre</label><input class="input" type="text" value="{{ clientForm.nombre }}" sc-camel-on-change="{{ onClientFieldNombre }}"></div>
@@ -1218,8 +1230,10 @@ function tituloFor(typeKey, asset) {
 }
 
 function emptyClientForm() {
-  return { apellido: '', nombre: '', tipoDocumento: 'DNI', dni: '', condicionFiscal: 'Consumidor Final', telefono: '', email: '', direccion: '', fechaNacimiento: '', provincia: '', localidad: '', codigoPostal: '' };
+  return { productor: '', apellido: '', nombre: '', tipoDocumento: 'DNI', dni: '', condicionFiscal: 'Consumidor Final', telefono: '', email: '', direccion: '', fechaNacimiento: '', provincia: '', localidad: '', codigoPostal: '' };
 }
+
+const PRODUCTORES = ['CRUBELLATI MARIANO', 'ARANOVICH PABLO GASTON', 'BRANCA PABLO', 'OSQUIGUIL HERNAN', 'HARIABETIAN ROBERTO'];
 
 function emptyAssetForm() {
   return { aseguradora: '', nPoliza: '', sumaAsegurada: '', prima: '', vigenciaDesde: '', vigenciaHasta: '',
@@ -1394,7 +1408,7 @@ class Component extends DCLogic {
       const notas = (noteRows || []).filter((n) => n.client_id === c.id)
         .map((n) => ({ id: n.id, author: n.author_name, date: fmtDate((n.created_at || '').slice(0, 10)), text: n.text }));
       return {
-        id: c.id, apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipo_documento, dni: c.dni,
+        id: c.id, productor: c.productor || '', apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipo_documento, dni: c.dni,
         condicionFiscal: c.condicion_fiscal, telefono: c.telefono, email: c.email,
         fechaNacimiento: c.fecha_nacimiento || '', provincia: c.provincia, localidad: c.localidad,
         codigoPostal: c.codigo_postal, direccion: c.direccion,
@@ -1504,9 +1518,10 @@ class Component extends DCLogic {
   openEditClientDialog = () => {
     const c = this.state.clients.find((c) => c.id === this.state.selectedClientId);
     if (!c) return;
-    this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: c.id, clientForm: { apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipoDocumento || 'DNI', dni: c.dni, condicionFiscal: c.condicionFiscal || 'Consumidor Final', telefono: c.telefono, email: c.email, direccion: c.direccion, fechaNacimiento: c.fechaNacimiento || '', provincia: c.provincia || '', localidad: c.localidad || '', codigoPostal: c.codigoPostal || '' } });
+    this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: c.id, clientForm: { productor: c.productor || '', apellido: c.apellido, nombre: c.nombre, tipoDocumento: c.tipoDocumento || 'DNI', dni: c.dni, condicionFiscal: c.condicionFiscal || 'Consumidor Final', telefono: c.telefono, email: c.email, direccion: c.direccion, fechaNacimiento: c.fechaNacimiento || '', provincia: c.provincia || '', localidad: c.localidad || '', codigoPostal: c.codigoPostal || '' } });
   };
   closeClientDialog = () => this.setState({ clientDialogOpen: false });
+  onClientFieldProductor = (e) => this.setState({ clientForm: { ...this.state.clientForm, productor: e.target.value } });
   onClientFieldApellido = (e) => this.setState({ clientForm: { ...this.state.clientForm, apellido: e.target.value } });
   onClientFieldNombre = (e) => this.setState({ clientForm: { ...this.state.clientForm, nombre: e.target.value } });
   onClientFieldTipoDocumento = (e) => this.setState({ clientForm: { ...this.state.clientForm, tipoDocumento: e.target.value } });
@@ -1523,7 +1538,7 @@ class Component extends DCLogic {
     const f = this.state.clientForm;
     if (!f.apellido || !f.nombre) return;
     const row = {
-      apellido: f.apellido, nombre: f.nombre, tipo_documento: f.tipoDocumento, dni: f.dni,
+      productor: f.productor, apellido: f.apellido, nombre: f.nombre, tipo_documento: f.tipoDocumento, dni: f.dni,
       condicion_fiscal: f.condicionFiscal, telefono: f.telefono, email: f.email,
       fecha_nacimiento: f.fechaNacimiento || null, direccion: f.direccion,
       provincia: f.provincia, localidad: f.localidad, codigo_postal: f.codigoPostal,
@@ -1966,10 +1981,11 @@ class Component extends DCLogic {
       stopProp: this.stopProp,
       clientDialogOpen: s.clientDialogOpen, clientDialogTitle: s.editingClientId ? 'Editar cliente' : 'Nuevo cliente', clientForm: s.clientForm,
       closeClientDialog: this.closeClientDialog, saveClient: this.saveClient,
+      onClientFieldProductor: this.onClientFieldProductor,
       onClientFieldApellido: this.onClientFieldApellido, onClientFieldNombre: this.onClientFieldNombre, onClientFieldTipoDocumento: this.onClientFieldTipoDocumento, onClientFieldCondicionFiscal: this.onClientFieldCondicionFiscal, onClientFieldDni: this.onClientFieldDni, onClientFieldTelefono: this.onClientFieldTelefono,
       onClientFieldEmail: this.onClientFieldEmail, onClientFieldDireccion: this.onClientFieldDireccion,
       onClientFieldFechaNacimiento: this.onClientFieldFechaNacimiento, onClientFieldProvincia: this.onClientFieldProvincia, onClientFieldLocalidad: this.onClientFieldLocalidad, onClientFieldCodigoPostal: this.onClientFieldCodigoPostal,
-      provinciaOptions: PROVINCIAS, aseguradoraOptions: ASEGURADORAS,
+      provinciaOptions: PROVINCIAS, aseguradoraOptions: ASEGURADORAS, productorOptions: PRODUCTORES,
       showAssetModal: s.showAssetModal, assetDialogTitle: (s.editingQuoteId ? 'Editar Cotización' : (s.editingAssetId ? 'Editar ' : 'Agregar ') + (currentType ? currentType.singular : '')), assetForm: s.assetForm,
       closeAssetDialog: this.closeAssetDialog, saveAsset: this.saveAsset, extraFieldsForForm,
       onAssetFieldAseguradora: this.onAssetFieldAseguradora, onAssetFieldNPoliza: this.onAssetFieldNPoliza, onAssetFieldSumaAsegurada: this.onAssetFieldSumaAsegurada,
