@@ -1209,6 +1209,24 @@
           <p class="text-muted" style="font-size:13px; margin-top:var(--space-3);">{{ importRowCount }} filas detectadas.</p>
         </sc-if>
 
+        <sc-if value="{{ isImportStepSsnPreview }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="font-size:13px;">Se detectó un archivo de operaciones (formato SSN) — se clasificó automáticamente por tipo de riesgo, no hace falta elegir nada.</p>
+          <div style="display:flex; flex-direction:column; gap:var(--space-1); margin:var(--space-3) 0;">
+            <sc-for list="{{ importSsnSummaryRows }}" as="sr" hint-placeholder-count="4">
+              <div style="display:flex; justify-content:space-between; padding:6px 2px; border-bottom:1px solid var(--color-divider);">
+                <span>{{ sr.label }}</span><strong>{{ sr.count }}</strong>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ importSsnUnclassifiedCount }}" hint-placeholder-val="{{ false }}">
+            <p class="text-muted" style="font-size:13px;">{{ importSsnUnclassifiedCount }} filas no se pudieron clasificar automáticamente y no se van a importar.</p>
+          </sc-if>
+          <sc-if value="{{ importSsnSkippedCount }}" hint-placeholder-val="{{ false }}">
+            <p class="text-muted" style="font-size:13px;">{{ importSsnSkippedCount }} filas son anulaciones y no se importan.</p>
+          </sc-if>
+          <p class="text-muted" style="font-size:13px;">La aseguradora se carga con su código SSN (ej. "Cía 116") — podés corregir el nombre real después desde cada póliza.</p>
+        </sc-if>
+
         <sc-if value="{{ isImportStepResult }}" hint-placeholder-val="{{ false }}">
           <p>Clientes nuevos: {{ importResult.created }}</p>
           <p>Clientes existentes con póliza agregada: {{ importResult.matched }}</p>
@@ -1229,6 +1247,9 @@
             <button class="btn btn-secondary" sc-camel-on-click="{{ closeImportWizard }}">Cancelar</button>
             <sc-if value="{{ isImportStepMap }}" hint-placeholder-val="{{ false }}">
               <button class="btn btn-primary" sc-camel-on-click="{{ runImport }}" disabled="{{ importBusy }}">{{ importRunLabel }}</button>
+            </sc-if>
+            <sc-if value="{{ isImportStepSsnPreview }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-primary" sc-camel-on-click="{{ runSsnImport }}" disabled="{{ importBusy }}">{{ importRunLabel }}</button>
             </sc-if>
             <sc-if value="{{ isImportStepResult }}" hint-placeholder-val="{{ false }}">
               <button class="btn btn-primary" sc-camel-on-click="{{ closeImportWizard }}">Cerrar</button>
@@ -1335,7 +1356,7 @@ function assetTypeByKey(key) { return ASSET_TYPES.find(t => t.key === key); }
 const PROVINCIAS = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
 const ASEGURADORAS = ['Allianz', 'Barbuss', 'BBVA', 'Berkley', 'Chubb', 'Experta', 'Federación Patronal', 'Galicia', 'Integrity', 'La Caja', 'La Segunda', 'Mercantil Andina', 'Meridional', 'San Cristóbal', 'Sancor', 'Zurich'];
 
-function nombreCompleto(c) { return c.apellido + ', ' + c.nombre; }
+function nombreCompleto(c) { return c.nombre ? c.apellido + ', ' + c.nombre : c.apellido; }
 
 function quoteTagClass(estado) {
   if (estado === 'Aceptada') return 'tag-accent';
@@ -1538,8 +1559,123 @@ async function parseImportFile(file) {
   if (name.endsWith('.xml')) return parseXmlText(text);
   return parseCsvText(text);
 }
+
+// ── Formato SSN (Registro de Operaciones de Productores) ───────────────────
+// Reconoce automáticamente los exports estándar que usan la mayoría de las
+// aseguradoras/plataformas de gestión (columnas AsegNombre/BienAsegurado/Ramo
+// en CSV, o <BienAsegurado>/<Ramo> en XML) y clasifica cada fila por tipo de
+// riesgo sin pedirle nada al usuario.
+const SSN_TEXT_TYPE_MAP = {
+  'automotores': 'auto', 'motovehiculos': 'auto', 'motovehículos': 'auto',
+  'hogar': 'inmueble', 'vivienda': 'inmueble', 'incendio': 'inmueble',
+  'comercio': 'negocio', 'combinado comercial': 'negocio',
+  'consorcio': 'consorcio', 'edificio': 'consorcio', 'edificios': 'consorcio',
+  'caucion': 'caucion', 'caución': 'caucion',
+  'seguro tecnico': 'tecnico', 'seguro técnico': 'tecnico', 'tecnico': 'tecnico', 'técnico': 'tecnico',
+  'vida': 'vidaSalud', 'vida colectivo': 'vidaSalud', 'salud': 'vidaSalud',
+  'accidentes personales': 'ap', 'responsabilidad civil': 'ap',
+  'art': 'art', 'riesgos del trabajo': 'art',
+};
+const SSN_RAMO_TYPE_MAP = { '32': 'auto', '33': 'auto', '44': 'tecnico', '39': 'caucion', '36': 'consorcio', '31': 'inmueble' };
+function detectRiskType(bienAsegurado, ramo) {
+  const text = (bienAsegurado || '').toLowerCase();
+  const prefix = text.split(':')[0].trim();
+  if (SSN_TEXT_TYPE_MAP[prefix]) return SSN_TEXT_TYPE_MAP[prefix];
+  return SSN_RAMO_TYPE_MAP[String(ramo || '').trim()] || null;
+}
+function parseArgNumber(v) {
+  if (v == null) return null;
+  let str = String(v).trim();
+  if (!str) return null;
+  if (str.includes(',') && !str.includes('.')) str = str.replace(',', '.');
+  else str = str.replace(/,/g, '');
+  const n = parseFloat(str);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+function splitPersonName(nombre, esEmpresa) {
+  const full = (nombre || '').trim();
+  if (esEmpresa) return { apellido: full, nombre: '' };
+  const parts = full.split(/\s+/);
+  if (parts.length <= 1) return { apellido: full, nombre: '' };
+  return { apellido: parts[0], nombre: parts.slice(1).join(' ') };
+}
+function stripBienPrefix(bien) {
+  const s = (bien || '').trim();
+  const idx = s.indexOf(':');
+  return idx >= 0 ? s.slice(idx + 1).trim() : s;
+}
+function buildSsnDetails(typeKey, bienAsegurado) {
+  const desc = stripBienPrefix(bienAsegurado);
+  const details = {};
+  if (typeKey === 'auto') {
+    const m = desc.toUpperCase().match(/\(?([A-Z]{2}\d{3}[A-Z]{2}|[A-Z]{3}\d{3})\)?\s*$/);
+    if (m) { details.patente = m[1]; details.marca = desc.slice(0, m.index).replace(/\(\s*$/, '').trim(); }
+    else details.marca = desc;
+  } else if (typeKey === 'inmueble' || typeKey === 'negocio' || typeKey === 'consorcio') {
+    details.direccion = desc;
+  } else if (typeKey === 'tecnico') details.tipoEquipo = desc;
+  else if (typeKey === 'caucion') details.tipoCaucion = desc;
+  else if (typeKey === 'vidaSalud') details.tipoCobertura = desc;
+  else if (typeKey === 'ap') details.cobertura = desc;
+  return details;
+}
+function detectSSNCsv(headers) {
+  return headers.includes('AsegNombre') && headers.includes('BienAsegurado') && headers.includes('Ramo');
+}
+function parseSSNCsvRows(headers, rows) {
+  const col = (name) => headers.indexOf(name);
+  const cAsegTipo = col('AsegTipo'), cAsegNombre = col('AsegNombre'), cAsegTipoDoc = col('AsegTipoDoc'),
+    cAsegNroDoc = col('AsegNroDoc'), cAsegCalle = col('AsegCalle'), cAsegNro = col('AsegNro'),
+    cAsegProvincia = col('AsegProvincia'), cAsegLocalidad = col('AsegLocalidad'), cAsegCP = col('AsegCP'),
+    cProdNombre = col('ProdNombre'), cCIAId = col('CIAId'), cObsNroPoliza = col('ObsNroPoliza'),
+    cSumaAsegurada = col('SumaAsegurada'), cCobertDesde = col('CobertFechaDesde'), cCobertHasta = col('CobertFechaHasta'),
+    cBienAsegurado = col('BienAsegurado'), cRamo = col('Ramo'), cObsTipoSSN = col('ObsTipoSSN');
+  return rows.map((r) => {
+    const esEmpresa = r[cAsegTipo] === '2';
+    const nameParts = splitPersonName(r[cAsegNombre], esEmpresa);
+    const bien = r[cBienAsegurado] || '';
+    const ramo = r[cRamo] || '';
+    return {
+      apellido: nameParts.apellido, nombre: nameParts.nombre,
+      tipoDocumento: r[cAsegTipoDoc] === '2' ? 'CUIT' : 'DNI', dni: r[cAsegNroDoc] || '',
+      condicionFiscal: esEmpresa ? 'Responsable Inscripto' : 'Consumidor Final',
+      direccion: [r[cAsegCalle], r[cAsegNro]].filter(Boolean).join(' '),
+      provincia: r[cAsegProvincia] || '', localidad: r[cAsegLocalidad] || '', codigoPostal: r[cAsegCP] || '',
+      productor: r[cProdNombre] || '',
+      aseguradora: 'Cía ' + String(r[cCIAId] || '').replace(/^0+/, ''),
+      nPoliza: r[cObsNroPoliza] || '', sumaAsegurada: parseArgNumber(r[cSumaAsegurada]),
+      vigenciaDesde: r[cCobertDesde] || '', vigenciaHasta: r[cCobertHasta] || '',
+      typeKey: detectRiskType(bien, ramo), tipoOperacion: r[cObsTipoSSN] || '', bienAsegurado: bien,
+    };
+  });
+}
+function parseSSNXml(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('XML inválido');
+  const registros = Array.from(doc.getElementsByTagName('Registro'));
+  return registros.map((reg) => {
+    const get = (tag) => { const el = reg.getElementsByTagName(tag)[0]; return el ? el.textContent.trim() : ''; };
+    const asegEl = reg.querySelector('Asegurados Asegurado');
+    const esEmpresa = asegEl ? asegEl.getAttribute('TipoAsegurado') === '2' : false;
+    const nameParts = splitPersonName(asegEl ? asegEl.getAttribute('Nombre') || '' : '', esEmpresa);
+    const bien = get('BienAsegurado');
+    const ramo = get('Ramo');
+    return {
+      apellido: nameParts.apellido, nombre: nameParts.nombre,
+      tipoDocumento: asegEl && asegEl.getAttribute('TipoDoc') === '2' ? 'CUIT' : 'DNI',
+      dni: asegEl ? asegEl.getAttribute('NroDoc') || '' : '',
+      condicionFiscal: esEmpresa ? 'Responsable Inscripto' : 'Consumidor Final',
+      direccion: '', provincia: '', localidad: '', codigoPostal: get('CPAProponente'),
+      productor: '', aseguradora: 'Cía ' + get('CiaID').replace(/^0+/, ''),
+      nPoliza: get('Poliza'), sumaAsegurada: parseArgNumber(get('SumaAsegurada')),
+      vigenciaDesde: get('CoberturaFechaDesde'), vigenciaHasta: get('CoberturaFechaHasta'),
+      typeKey: detectRiskType(bien, ramo), tipoOperacion: get('TipoOperacion'), bienAsegurado: bien,
+    };
+  });
+}
 async function runImportRows(headers, rows, fieldMap, category, existingClients) {
   const result = { created: 0, matched: 0, policies: 0, errorRows: [] };
+  const seenInThisImport = {};
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     try {
@@ -1552,8 +1688,11 @@ async function runImportRows(headers, rows, fieldMap, category, existingClients)
       let clientId = null;
       const dni = rec.dni ? String(rec.dni).trim() : '';
       if (dni) {
-        const existing = existingClients.find((c) => c.dni && c.dni.trim() === dni);
-        if (existing) clientId = existing.id;
+        if (seenInThisImport[dni]) clientId = seenInThisImport[dni];
+        else {
+          const existing = existingClients.find((c) => c.dni && c.dni.trim() === dni);
+          if (existing) clientId = existing.id;
+        }
       }
       if (!clientId) {
         const { data, error } = await sb.from('clients').insert({
@@ -1569,6 +1708,7 @@ async function runImportRows(headers, rows, fieldMap, category, existingClients)
       } else {
         result.matched++;
       }
+      if (dni) seenInThisImport[dni] = clientId;
       const details = {};
       Object.keys(rec).forEach((k) => { if (!IMPORT_KNOWN_FIELD_KEYS.has(k)) details[k] = rec[k]; });
       const { error: polErr } = await sb.from('policies').insert({
@@ -1624,7 +1764,7 @@ class Component extends DCLogic {
     taskDetailOpen: false, taskDetailId: null, newStepText: '',
 
     importWizardOpen: false, importStep: 'upload', importCategory: 'auto',
-    importHeaders: [], importRows: [], importFieldMap: {}, importError: '', importBusy: false, importResult: null,
+    importHeaders: [], importRows: [], importFieldMap: {}, importError: '', importBusy: false, importResult: null, importSsnRows: [],
 
     pdfImportOpen: false, pdfStep: 'upload', pdfBusy: false, pdfError: '', pdfForm: emptyPdfForm(),
   };
@@ -1815,7 +1955,7 @@ class Component extends DCLogic {
   closeAllDialogs = () => ({ clientDialogOpen: false, showAssetModal: false, showSiniestroModal: false, showDocModal: false });
   openNewClientDialog = () => this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: null, clientForm: emptyClientForm() });
 
-  openImportWizard = () => this.setState({ importWizardOpen: true, importStep: 'upload', importCategory: 'auto', importHeaders: [], importRows: [], importFieldMap: {}, importError: '', importResult: null });
+  openImportWizard = () => this.setState({ importWizardOpen: true, importStep: 'upload', importCategory: 'auto', importHeaders: [], importRows: [], importFieldMap: {}, importError: '', importResult: null, importSsnRows: [] });
   closeImportWizard = () => this.setState({ importWizardOpen: false });
   onImportCategoryChange = (e) => this.setState({ importCategory: e.target.value });
   onImportFileChange = async (e) => {
@@ -1823,7 +1963,23 @@ class Component extends DCLogic {
     if (!file) return;
     this.setState({ importError: '' });
     try {
-      const { headers, rows } = await parseImportFile(file);
+      const name = file.name.toLowerCase();
+      if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+        const { headers, rows } = await parseXlsxFile(file);
+        if (!headers.length) throw new Error('No se detectaron columnas en el archivo.');
+        this.setState({ importHeaders: headers, importRows: rows, importFieldMap: {}, importStep: 'map' });
+        return;
+      }
+      const text = await file.text();
+      if (/<BienAsegurado>/.test(text)) {
+        this.setState({ importSsnRows: parseSSNXml(text), importStep: 'ssn-preview' });
+        return;
+      }
+      const { headers, rows } = parseCsvText(text);
+      if (detectSSNCsv(headers)) {
+        this.setState({ importSsnRows: parseSSNCsvRows(headers, rows), importStep: 'ssn-preview' });
+        return;
+      }
       if (!headers.length) throw new Error('No se detectaron columnas en el archivo.');
       this.setState({ importHeaders: headers, importRows: rows, importFieldMap: {}, importStep: 'map' });
     } catch (err) {
@@ -1834,6 +1990,52 @@ class Component extends DCLogic {
   runImport = async () => {
     this.setState({ importBusy: true });
     const result = await runImportRows(this.state.importHeaders, this.state.importRows, this.state.importFieldMap, this.state.importCategory, this.state.clients);
+    this.setState({ importResult: result, importStep: 'result', importBusy: false });
+    await this.loadAll();
+  };
+  runSsnImport = async () => {
+    this.setState({ importBusy: true });
+    const active = this.state.importSsnRows.filter((r) => r.tipoOperacion !== '4' && r.typeKey);
+    const result = { created: 0, matched: 0, policies: 0, errorRows: [] };
+    const seenInThisImport = {};
+    for (let i = 0; i < active.length; i++) {
+      const r = active[i];
+      try {
+        let clientId = null;
+        const dni = r.dni ? String(r.dni).trim() : '';
+        if (dni) {
+          if (seenInThisImport[dni]) clientId = seenInThisImport[dni];
+          else {
+            const existing = this.state.clients.find((c) => c.dni && c.dni.trim() === dni);
+            if (existing) clientId = existing.id;
+          }
+        }
+        if (!clientId) {
+          const { data, error } = await sb.from('clients').insert({
+            apellido: r.apellido || '', nombre: r.nombre || '', tipo_documento: r.tipoDocumento,
+            dni, condicion_fiscal: r.condicionFiscal, telefono: '', email: '',
+            direccion: r.direccion || '', provincia: r.provincia || '', localidad: r.localidad || '',
+            codigo_postal: r.codigoPostal || '', productor: r.productor || '',
+          }).select().single();
+          if (error) throw error;
+          clientId = data.id;
+          result.created++;
+        } else {
+          result.matched++;
+        }
+        if (dni) seenInThisImport[dni] = clientId;
+        const { error: polErr } = await sb.from('policies').insert({
+          client_id: clientId, type_key: r.typeKey,
+          aseguradora: r.aseguradora || '', n_poliza: r.nPoliza || '',
+          suma_asegurada: r.sumaAsegurada, vigencia_desde: r.vigenciaDesde || null, vigencia_hasta: r.vigenciaHasta || null,
+          details: buildSsnDetails(r.typeKey, r.bienAsegurado),
+        });
+        if (polErr) throw polErr;
+        result.policies++;
+      } catch (err) {
+        result.errorRows.push('Fila ' + (i + 1) + ': ' + (err.message || err));
+      }
+    }
     this.setState({ importResult: result, importStep: 'result', importBusy: false });
     await this.loadAll();
   };
@@ -2275,6 +2477,13 @@ class Component extends DCLogic {
     ];
     const importResultSafe = s.importResult || { created: 0, matched: 0, policies: 0, errorRows: [] };
 
+    const ssnActiveRows = s.importSsnRows.filter((r) => r.tipoOperacion !== '4');
+    const ssnSkippedCount = s.importSsnRows.length - ssnActiveRows.length;
+    const ssnByType = {};
+    let ssnUnclassifiedCount = 0;
+    ssnActiveRows.forEach((r) => { if (!r.typeKey) ssnUnclassifiedCount++; else ssnByType[r.typeKey] = (ssnByType[r.typeKey] || 0) + 1; });
+    const importSsnSummaryRows = Object.keys(ssnByType).map((k) => ({ label: (assetTypeByKey(k) || {}).label || k, count: ssnByType[k] }));
+
     return {
       showConfigMissing: !SUPABASE_CONFIGURED,
       authLoading: SUPABASE_CONFIGURED && s.authLoading, showLogin: SUPABASE_CONFIGURED && !s.authLoading && !s.session, showApp: SUPABASE_CONFIGURED && !!s.session,
@@ -2386,6 +2595,7 @@ class Component extends DCLogic {
 
       importWizardOpen: s.importWizardOpen, openImportWizard: this.openImportWizard, closeImportWizard: this.closeImportWizard,
       isImportStepUpload: s.importStep === 'upload', isImportStepMap: s.importStep === 'map', isImportStepResult: s.importStep === 'result',
+      isImportStepSsnPreview: s.importStep === 'ssn-preview', importSsnSummaryRows, importSsnUnclassifiedCount: ssnUnclassifiedCount, importSsnSkippedCount: ssnSkippedCount, runSsnImport: this.runSsnImport,
       importCategory: s.importCategory, onImportCategoryChange: this.onImportCategoryChange,
       onImportFileChange: this.onImportFileChange, importError: s.importError,
       importColumnRows: s.importHeaders.map((h, i) => ({
