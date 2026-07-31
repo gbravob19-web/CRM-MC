@@ -41,7 +41,21 @@ where id = (select id from auth.users where email = 'maria@tuempresa.com');
 
 Con eso, al abrir `index.html` (servido como sitio estático — no funciona con `file://` por las políticas de módulos del navegador, necesita `http://`) vas a ver la pantalla de inicio de sesión. Cada broker entra con su email/contraseña y a partir de ahí todo se guarda y sincroniza en tiempo real entre todos los usuarios conectados.
 
+## 5. (Opcional) Activar "Cargar PDF de póliza" con IA
+
+El botón "Importar datos" (archivos .csv/.txt/.xml/.xls/.xlsx) ya funciona sin pasos extra. El botón **"Cargar PDF de póliza"** necesita una función server-side, porque leer el PDF con IA requiere una API key que no puede viajar al navegador:
+
+1. Conseguí una API key en [console.anthropic.com](https://console.anthropic.com) (Settings → API Keys).
+2. En el dashboard de Supabase: **Edge Functions** → **Deploy a new function**.
+3. Nombre exacto: `extract-policy`. Pegá el contenido de [`supabase/functions/extract-policy/index.ts`](./supabase/functions/extract-policy/index.ts) → **Deploy**.
+4. **Edge Functions → Secrets** (o Project Settings → Edge Functions) → agregá:
+   - `ANTHROPIC_API_KEY` = la key del paso 1.
+5. Listo — al subir un PDF, la función lo lee con Claude y precarga el formulario para que lo revises antes de guardar (la IA puede cometer errores, siempre se muestra para confirmar).
+
+Este paso tiene un costo pequeño por PDF procesado (consumo de la API de Anthropic), a cargo de tu cuenta.
+
 ## Notas
 
 - **Documentos**: por ahora solo se guarda nombre/tipo/fecha (igual que el prototipo original), sin subir el archivo real. Se puede sumar Supabase Storage más adelante si hace falta.
 - **Acceso**: el modelo es de cartera compartida — cualquier broker autenticado ve y edita todos los clientes. Si más adelante querés restringir por broker asignado, avisame y ajustamos las políticas de RLS.
+- **Importar datos**: cada fila del archivo se carga como una póliza vigente de la categoría que elijas en el asistente. Si el DNI de la fila coincide con un cliente ya cargado, se le agrega la póliza; si no, se crea un cliente nuevo. Los formatos soportados son .csv, .txt (con comas, punto y coma o tabulaciones), .xml, .xls y .xlsx.

@@ -3,6 +3,7 @@
 <helmet>
   <link rel="stylesheet" href="./ds/industry-c6ce59bb-199d-4796-96f0-a00e8f4789a4/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     body { margin: 0; }
     a { color: var(--color-accent-700); }
@@ -647,7 +648,11 @@
           <h1 style="margin-bottom:var(--space-1);">Clientes</h1>
           <p class="text-muted" style="margin:0;">{{ filteredClientsCount }} resultados</p>
         </div>
-        <button class="btn btn-primary" sc-camel-on-click="{{ openNewClientDialog }}">+ Nuevo cliente</button>
+        <div style="display:flex; gap:var(--space-2);">
+          <button class="btn btn-secondary" sc-camel-on-click="{{ openImportWizard }}">Importar datos</button>
+          <button class="btn btn-secondary" sc-camel-on-click="{{ openPdfImport }}">Cargar PDF de póliza</button>
+          <button class="btn btn-primary" sc-camel-on-click="{{ openNewClientDialog }}">+ Nuevo cliente</button>
+        </div>
       </div>
 
       <div class="field" style="max-width:360px; margin-bottom:var(--space-4);">
@@ -1137,6 +1142,7 @@
           </div>
           <div class="field"><label>Localidad</label><input class="input" type="text" value="{{ clientForm.localidad }}" sc-camel-on-change="{{ onClientFieldLocalidad }}"></div>
           <div class="field"><label>Código postal</label><input class="input" type="text" value="{{ clientForm.codigoPostal }}" sc-camel-on-change="{{ onClientFieldCodigoPostal }}"></div>
+        </div>
         <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
           <a href="#" sc-camel-on-click="{{ closeClientDialog }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
           <div style="display:flex; gap:var(--space-2);"><button class="btn btn-secondary" sc-camel-on-click="{{ closeClientDialog }}">Cancelar</button>
@@ -1147,6 +1153,132 @@
     </div>
 
 
+  </sc-if>
+
+  <sc-if value="{{ importWizardOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closeImportWizard }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-width:720px; max-height:86vh; overflow:auto;">
+        <div class="dialog-title">Importar datos</div>
+
+        <sc-if value="{{ isImportStepUpload }}" hint-placeholder-val="{{ true }}">
+          <div class="field">
+            <label>Categoría de las pólizas a importar</label>
+            <sc-raw-select class="input" value="{{ importCategory }}" sc-camel-on-change="{{ onImportCategoryChange }}">
+              <sc-for list="{{ riskTypeOptions }}" as="rt" hint-placeholder-count="9">
+                <option value="{{ rt.key }}">{{ rt.label }}</option>
+              </sc-for>
+            </sc-raw-select>
+          </div>
+          <div class="field">
+            <label>Archivo (.csv, .txt, .xml, .xls, .xlsx)</label>
+            <input class="input" type="file" accept=".csv,.txt,.xml,.xls,.xlsx" sc-camel-on-change="{{ onImportFileChange }}">
+          </div>
+          <sc-if value="{{ importError }}" hint-placeholder-val="{{ false }}">
+            <p style="color:#b00020; font-size:13px;">{{ importError }}</p>
+          </sc-if>
+          <p class="text-muted" style="font-size:13px;">Cada fila del archivo se carga como una póliza vigente. Si el DNI de la fila coincide con un cliente existente, se le agrega la póliza; si no, se crea un cliente nuevo.</p>
+        </sc-if>
+
+        <sc-if value="{{ isImportStepMap }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="font-size:13px;">Asociá cada columna del archivo con un campo del CRM. Las columnas sin asociar se ignoran.</p>
+          <div style="display:flex; flex-direction:column; gap:var(--space-2); max-height:320px; overflow:auto;">
+            <sc-for list="{{ importColumnRows }}" as="col" hint-placeholder-count="6">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-2); align-items:center; border-bottom:1px solid var(--color-divider); padding-bottom:var(--space-2);">
+                <div>
+                  <strong>{{ col.header }}</strong>
+                  <div class="text-muted" style="font-size:12px;">{{ col.sample }}</div>
+                </div>
+                <sc-raw-select class="input" value="{{ col.target }}" sc-camel-on-change="{{ col.onChange }}">
+                  <sc-for list="{{ importFieldOptions }}" as="fo" hint-placeholder-count="10">
+                    <option value="{{ fo.key }}">{{ fo.label }}</option>
+                  </sc-for>
+                </sc-raw-select>
+              </div>
+            </sc-for>
+          </div>
+          <p class="text-muted" style="font-size:13px; margin-top:var(--space-3);">{{ importRowCount }} filas detectadas.</p>
+        </sc-if>
+
+        <sc-if value="{{ isImportStepResult }}" hint-placeholder-val="{{ false }}">
+          <p>Clientes nuevos: {{ importResult.created }}</p>
+          <p>Clientes existentes con póliza agregada: {{ importResult.matched }}</p>
+          <p>Pólizas cargadas: {{ importResult.policies }}</p>
+          <sc-if value="{{ importResult.hasErrors }}" hint-placeholder-val="{{ false }}">
+            <p style="color:#b00020;">Filas con error:</p>
+            <div style="max-height:160px; overflow:auto; font-size:13px;">
+              <sc-for list="{{ importResult.errorRows }}" as="er" hint-placeholder-count="2">
+                <div>{{ er }}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closeImportWizard }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);">
+            <button class="btn btn-secondary" sc-camel-on-click="{{ closeImportWizard }}">Cancelar</button>
+            <sc-if value="{{ isImportStepMap }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-primary" sc-camel-on-click="{{ runImport }}" disabled="{{ importBusy }}">{{ importRunLabel }}</button>
+            </sc-if>
+            <sc-if value="{{ isImportStepResult }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-primary" sc-camel-on-click="{{ closeImportWizard }}">Cerrar</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pdfImportOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" sc-camel-on-click="{{ closePdfImport }}" style="z-index:100;">
+      <div class="dialog" sc-camel-on-click="{{ stopProp }}" style="background:var(--color-bg); box-shadow:var(--shadow-lg); max-width:640px; max-height:86vh; overflow:auto;">
+        <div class="dialog-title">Cargar PDF de póliza</div>
+
+        <sc-if value="{{ isPdfStepUpload }}" hint-placeholder-val="{{ true }}">
+          <div class="field">
+            <label>Archivo PDF</label>
+            <input class="input" type="file" accept="application/pdf" sc-camel-on-change="{{ onPdfFileChange }}">
+          </div>
+          <sc-if value="{{ pdfBusy }}" hint-placeholder-val="{{ false }}">
+            <p class="text-muted">Leyendo el PDF con IA, puede tardar unos segundos…</p>
+          </sc-if>
+          <sc-if value="{{ pdfError }}" hint-placeholder-val="{{ false }}">
+            <p style="color:#b00020; font-size:13px;">{{ pdfError }}</p>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ isPdfStepReview }}" hint-placeholder-val="{{ false }}">
+          <p class="text-muted" style="font-size:13px;">Revisá los datos antes de guardar — la IA puede cometer errores.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+            <div class="field">
+              <label>Categoría</label>
+              <sc-raw-select class="input" value="{{ pdfForm.typeKey }}" sc-camel-on-change="{{ onPdfFieldTypeKey }}">
+                <sc-for list="{{ riskTypeOptions }}" as="rt" hint-placeholder-count="9"><option value="{{ rt.key }}">{{ rt.label }}</option></sc-for>
+              </sc-raw-select>
+            </div>
+            <div class="field"><label>DNI del cliente</label><input class="input" type="text" value="{{ pdfForm.dni }}" sc-camel-on-change="{{ onPdfFieldDni }}"></div>
+            <div class="field"><label>Apellido</label><input class="input" type="text" value="{{ pdfForm.apellido }}" sc-camel-on-change="{{ onPdfFieldApellido }}"></div>
+            <div class="field"><label>Nombre</label><input class="input" type="text" value="{{ pdfForm.nombre }}" sc-camel-on-change="{{ onPdfFieldNombre }}"></div>
+            <div class="field"><label>Aseguradora</label><input class="input" type="text" value="{{ pdfForm.aseguradora }}" sc-camel-on-change="{{ onPdfFieldAseguradora }}"></div>
+            <div class="field"><label>N° de póliza</label><input class="input" type="text" value="{{ pdfForm.nPoliza }}" sc-camel-on-change="{{ onPdfFieldNPoliza }}"></div>
+            <div class="field"><label>Suma asegurada</label><input class="input" type="text" value="{{ pdfForm.sumaAsegurada }}" sc-camel-on-change="{{ onPdfFieldSumaAsegurada }}"></div>
+            <div class="field"><label>Prima</label><input class="input" type="text" value="{{ pdfForm.prima }}" sc-camel-on-change="{{ onPdfFieldPrima }}"></div>
+            <div class="field"><label>Vigencia desde</label><input class="input" type="date" value="{{ pdfForm.vigenciaDesde }}" sc-camel-on-change="{{ onPdfFieldVigenciaDesde }}"></div>
+            <div class="field"><label>Vigencia hasta</label><input class="input" type="date" value="{{ pdfForm.vigenciaHasta }}" sc-camel-on-change="{{ onPdfFieldVigenciaHasta }}"></div>
+          </div>
+        </sc-if>
+
+        <div class="dialog-actions" style="justify-content:space-between; align-items:center;">
+          <a href="#" sc-camel-on-click="{{ closePdfImport }}" style="color:var(--color-accent-700); text-decoration:underline; cursor:pointer;">← Volver</a>
+          <div style="display:flex; gap:var(--space-2);">
+            <button class="btn btn-secondary" sc-camel-on-click="{{ closePdfImport }}">Cancelar</button>
+            <sc-if value="{{ isPdfStepReview }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-primary" sc-camel-on-click="{{ savePdfImport }}">Guardar</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
   </sc-if>
 </div>
 </sc-if>
@@ -1307,6 +1439,158 @@ function quoteRowToClientQuote(row) {
     details: row.details || {} };
 }
 
+// ── Importación masiva (.csv / .txt / .xml / .xls / .xlsx) ─────────────────
+const IMPORT_CLIENT_FIELDS = [
+  ['apellido', 'Cliente: Apellido'], ['nombre', 'Cliente: Nombre'], ['tipoDocumento', 'Cliente: Tipo de documento'],
+  ['dni', 'Cliente: DNI'], ['condicionFiscal', 'Cliente: Condición fiscal'], ['telefono', 'Cliente: Teléfono'],
+  ['email', 'Cliente: Email'], ['direccion', 'Cliente: Dirección'], ['fechaNacimiento', 'Cliente: Fecha de nacimiento'],
+  ['provincia', 'Cliente: Provincia'], ['localidad', 'Cliente: Localidad'], ['codigoPostal', 'Cliente: Código postal'],
+  ['productor', 'Cliente: Productor'],
+];
+const IMPORT_POLICY_FIELDS = [
+  ['aseguradora', 'Póliza: Aseguradora'], ['nPoliza', 'Póliza: N° de póliza'], ['sumaAsegurada', 'Póliza: Suma asegurada'],
+  ['prima', 'Póliza: Prima'], ['vigenciaDesde', 'Póliza: Vigencia desde'], ['vigenciaHasta', 'Póliza: Vigencia hasta'],
+  ['coberturaContratada', 'Póliza: Cobertura contratada'], ['franquicia', 'Póliza: Franquicia'],
+];
+const IMPORT_KNOWN_FIELD_KEYS = new Set([...IMPORT_CLIENT_FIELDS, ...IMPORT_POLICY_FIELDS].map(([k]) => k));
+
+function normalizeDate(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (m) return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+  return null;
+}
+
+function detectDelimiter(line) {
+  const counts = { ',': (line.match(/,/g) || []).length, ';': (line.match(/;/g) || []).length, '\t': (line.match(/\t/g) || []).length };
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+function parseCsvText(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter((l) => l.trim() !== '');
+  if (!lines.length) return { headers: [], rows: [] };
+  const delim = detectDelimiter(lines[0]);
+  const parseLine = (line) => {
+    const out = []; let cur = ''; let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQuotes = false; }
+        else cur += ch;
+      } else if (ch === '"') inQuotes = true;
+      else if (ch === delim) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map((v) => v.trim());
+  };
+  const headers = parseLine(lines[0]);
+  const rows = lines.slice(1).map(parseLine);
+  return { headers, rows };
+}
+function parseXmlText(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('XML inválido');
+  const tagCounts = {};
+  const allEls = doc.getElementsByTagName('*');
+  for (const el of allEls) {
+    const parent = el.parentElement;
+    if (!parent) continue;
+    const key = parent.tagName + '>' + el.tagName;
+    tagCounts[key] = (tagCounts[key] || 0) + 1;
+  }
+  let bestKey = null, bestCount = 1;
+  for (const k in tagCounts) if (tagCounts[k] > bestCount) { bestCount = tagCounts[k]; bestKey = k; }
+  if (!bestKey) return { headers: [], rows: [] };
+  const rowTag = bestKey.split('>')[1];
+  const rowEls = Array.from(doc.getElementsByTagName(rowTag));
+  const headers = [];
+  rowEls.forEach((el) => { Array.from(el.children).forEach((c) => { if (!headers.includes(c.tagName)) headers.push(c.tagName); }); });
+  const rows = rowEls.map((el) => headers.map((h) => { const c = el.getElementsByTagName(h)[0]; return c ? c.textContent.trim() : ''; }));
+  return { headers, rows };
+}
+async function parseXlsxFile(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+  const rows = grid.filter((r) => r.some((v) => v !== '' && v != null));
+  if (!rows.length) return { headers: [], rows: [] };
+  return { headers: rows[0].map(String), rows: rows.slice(1) };
+}
+async function parseImportFile(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) return parseXlsxFile(file);
+  const text = await file.text();
+  if (name.endsWith('.xml')) return parseXmlText(text);
+  return parseCsvText(text);
+}
+async function runImportRows(headers, rows, fieldMap, category, existingClients) {
+  const result = { created: 0, matched: 0, policies: 0, errorRows: [] };
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    try {
+      const rec = {};
+      headers.forEach((h, idx) => {
+        const target = fieldMap[h];
+        if (target && target !== '_ignore') rec[target] = row[idx];
+      });
+      if (!rec.apellido && !rec.nombre && !rec.dni) continue;
+      let clientId = null;
+      const dni = rec.dni ? String(rec.dni).trim() : '';
+      if (dni) {
+        const existing = existingClients.find((c) => c.dni && c.dni.trim() === dni);
+        if (existing) clientId = existing.id;
+      }
+      if (!clientId) {
+        const { data, error } = await sb.from('clients').insert({
+          apellido: rec.apellido || '', nombre: rec.nombre || '', tipo_documento: rec.tipoDocumento || 'DNI',
+          dni, condicion_fiscal: rec.condicionFiscal || 'Consumidor Final',
+          telefono: rec.telefono || '', email: rec.email || '', direccion: rec.direccion || '',
+          fecha_nacimiento: normalizeDate(rec.fechaNacimiento), provincia: rec.provincia || '',
+          localidad: rec.localidad || '', codigo_postal: rec.codigoPostal || '', productor: rec.productor || '',
+        }).select().single();
+        if (error) throw error;
+        clientId = data.id;
+        result.created++;
+      } else {
+        result.matched++;
+      }
+      const details = {};
+      Object.keys(rec).forEach((k) => { if (!IMPORT_KNOWN_FIELD_KEYS.has(k)) details[k] = rec[k]; });
+      const { error: polErr } = await sb.from('policies').insert({
+        client_id: clientId, type_key: category,
+        aseguradora: rec.aseguradora || '', n_poliza: rec.nPoliza || '',
+        suma_asegurada: moneyToNumber(rec.sumaAsegurada), prima: moneyToNumber(rec.prima),
+        vigencia_desde: normalizeDate(rec.vigenciaDesde), vigencia_hasta: normalizeDate(rec.vigenciaHasta),
+        cobertura_contratada: rec.coberturaContratada || '', franquicia: rec.franquicia || '',
+        details,
+      });
+      if (polErr) throw polErr;
+      result.policies++;
+    } catch (err) {
+      result.errorRows.push('Fila ' + (i + 2) + ': ' + (err.message || err));
+    }
+  }
+  return result;
+}
+
+// ── Carga de PDF de póliza vía IA ────────────────────────────────────────
+function emptyPdfForm() {
+  return { typeKey: 'auto', dni: '', apellido: '', nombre: '', aseguradora: '', nPoliza: '', sumaAsegurada: '', prima: '', vigenciaDesde: '', vigenciaHasta: '' };
+}
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 class Component extends DCLogic {
   state = {
     session: null, authLoading: true, authEmail: '', authPassword: '', authError: '', authSubmitting: false,
@@ -1328,6 +1612,11 @@ class Component extends DCLogic {
     taskLists: [],
     activeTaskListId: null, newTaskText: '', newListName: '',
     taskDetailOpen: false, taskDetailId: null, newStepText: '',
+
+    importWizardOpen: false, importStep: 'upload', importCategory: 'auto',
+    importHeaders: [], importRows: [], importFieldMap: {}, importError: '', importBusy: false, importResult: null,
+
+    pdfImportOpen: false, pdfStep: 'upload', pdfBusy: false, pdfError: '', pdfForm: emptyPdfForm(),
   };
 
   // ── Auth + data lifecycle ────────────────────────────────────────────────
@@ -1515,6 +1804,82 @@ class Component extends DCLogic {
 
   closeAllDialogs = () => ({ clientDialogOpen: false, showAssetModal: false, showSiniestroModal: false, showDocModal: false });
   openNewClientDialog = () => this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: null, clientForm: emptyClientForm() });
+
+  openImportWizard = () => this.setState({ importWizardOpen: true, importStep: 'upload', importCategory: 'auto', importHeaders: [], importRows: [], importFieldMap: {}, importError: '', importResult: null });
+  closeImportWizard = () => this.setState({ importWizardOpen: false });
+  onImportCategoryChange = (e) => this.setState({ importCategory: e.target.value });
+  onImportFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    this.setState({ importError: '' });
+    try {
+      const { headers, rows } = await parseImportFile(file);
+      if (!headers.length) throw new Error('No se detectaron columnas en el archivo.');
+      this.setState({ importHeaders: headers, importRows: rows, importFieldMap: {}, importStep: 'map' });
+    } catch (err) {
+      this.setState({ importError: 'No se pudo leer el archivo: ' + (err.message || err) });
+    }
+  };
+  setImportFieldMap = (header, value) => this.setState({ importFieldMap: { ...this.state.importFieldMap, [header]: value } });
+  runImport = async () => {
+    this.setState({ importBusy: true });
+    const result = await runImportRows(this.state.importHeaders, this.state.importRows, this.state.importFieldMap, this.state.importCategory, this.state.clients);
+    this.setState({ importResult: result, importStep: 'result', importBusy: false });
+    await this.loadAll();
+  };
+
+  openPdfImport = () => this.setState({ pdfImportOpen: true, pdfStep: 'upload', pdfBusy: false, pdfError: '', pdfForm: emptyPdfForm() });
+  closePdfImport = () => this.setState({ pdfImportOpen: false });
+  onPdfFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    this.setState({ pdfBusy: true, pdfError: '' });
+    try {
+      const base64 = await fileToBase64(file);
+      const { data: sessionData } = await sb.auth.getSession();
+      const token = sessionData.session ? sessionData.session.access_token : '';
+      const resp = await fetch(SUPABASE_URL + '/functions/v1/extract-policy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ pdfBase64: base64 }),
+      });
+      if (!resp.ok) throw new Error('el servidor respondió ' + resp.status);
+      const extracted = await resp.json();
+      if (extracted.error) throw new Error(extracted.error);
+      this.setState({ pdfForm: { ...emptyPdfForm(), ...extracted }, pdfStep: 'review', pdfBusy: false });
+    } catch (err) {
+      this.setState({ pdfError: 'No se pudo procesar el PDF: ' + (err.message || err), pdfBusy: false });
+    }
+  };
+  onPdfFieldTypeKey = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, typeKey: e.target.value } });
+  onPdfFieldDni = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, dni: e.target.value } });
+  onPdfFieldApellido = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, apellido: e.target.value } });
+  onPdfFieldNombre = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, nombre: e.target.value } });
+  onPdfFieldAseguradora = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, aseguradora: e.target.value } });
+  onPdfFieldNPoliza = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, nPoliza: e.target.value } });
+  onPdfFieldSumaAsegurada = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, sumaAsegurada: e.target.value } });
+  onPdfFieldPrima = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, prima: e.target.value } });
+  onPdfFieldVigenciaDesde = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, vigenciaDesde: e.target.value } });
+  onPdfFieldVigenciaHasta = (e) => this.setState({ pdfForm: { ...this.state.pdfForm, vigenciaHasta: e.target.value } });
+  savePdfImport = async () => {
+    const f = this.state.pdfForm;
+    let clientId = null;
+    const dni = f.dni ? f.dni.trim() : '';
+    if (dni) { const existing = this.state.clients.find((c) => c.dni && c.dni.trim() === dni); if (existing) clientId = existing.id; }
+    if (!clientId) {
+      const { data, error } = await sb.from('clients').insert({ apellido: f.apellido || '', nombre: f.nombre || '', dni, tipo_documento: 'DNI', condicion_fiscal: 'Consumidor Final' }).select().single();
+      if (error) { this.setState({ pdfError: error.message }); return; }
+      clientId = data.id;
+    }
+    await sb.from('policies').insert({
+      client_id: clientId, type_key: f.typeKey,
+      aseguradora: f.aseguradora || '', n_poliza: f.nPoliza || '',
+      suma_asegurada: moneyToNumber(f.sumaAsegurada), prima: moneyToNumber(f.prima),
+      vigencia_desde: f.vigenciaDesde || null, vigencia_hasta: f.vigenciaHasta || null,
+    });
+    this.setState({ pdfImportOpen: false });
+    await this.loadAll();
+  };
   openEditClientDialog = () => {
     const c = this.state.clients.find((c) => c.id === this.state.selectedClientId);
     if (!c) return;
@@ -1891,6 +2256,15 @@ class Component extends DCLogic {
 
     const me = this.currentProfile();
 
+    const currentImportType = assetTypeByKey(s.importCategory);
+    const importFieldOptions = [
+      { key: '_ignore', label: 'No importar' },
+      ...IMPORT_CLIENT_FIELDS.map(([key, label]) => ({ key, label })),
+      ...IMPORT_POLICY_FIELDS.map(([key, label]) => ({ key, label })),
+      ...(currentImportType ? currentImportType.fields.map(f => ({ key: f.k, label: 'Póliza: ' + f.l })) : []),
+    ];
+    const importResultSafe = s.importResult || { created: 0, matched: 0, policies: 0, errorRows: [] };
+
     return {
       showConfigMissing: !SUPABASE_CONFIGURED,
       authLoading: SUPABASE_CONFIGURED && s.authLoading, showLogin: SUPABASE_CONFIGURED && !s.authLoading && !s.session, showApp: SUPABASE_CONFIGURED && !!s.session,
@@ -1999,6 +2373,27 @@ class Component extends DCLogic {
       siniestroTipoOptions,
       showDocModal: s.showDocModal, docForm: s.docForm, closeDocDialog: this.closeDocDialog, saveDoc: this.saveDoc,
       onDocFieldNombre: this.onDocFieldNombre, onDocFieldTipo: this.onDocFieldTipo,
+
+      importWizardOpen: s.importWizardOpen, openImportWizard: this.openImportWizard, closeImportWizard: this.closeImportWizard,
+      isImportStepUpload: s.importStep === 'upload', isImportStepMap: s.importStep === 'map', isImportStepResult: s.importStep === 'result',
+      importCategory: s.importCategory, onImportCategoryChange: this.onImportCategoryChange,
+      onImportFileChange: this.onImportFileChange, importError: s.importError,
+      importColumnRows: s.importHeaders.map((h, i) => ({
+        header: h, sample: s.importRows[0] ? String(s.importRows[0][i] ?? '').slice(0, 40) : '',
+        target: s.importFieldMap[h] || '_ignore', onChange: (e) => this.setImportFieldMap(h, e.target.value),
+      })),
+      importFieldOptions, importRowCount: s.importRows.length,
+      importBusy: s.importBusy, importRunLabel: s.importBusy ? 'Importando…' : 'Importar', runImport: this.runImport,
+      importResult: { ...importResultSafe, hasErrors: importResultSafe.errorRows.length > 0 },
+
+      pdfImportOpen: s.pdfImportOpen, openPdfImport: this.openPdfImport, closePdfImport: this.closePdfImport,
+      isPdfStepUpload: s.pdfStep === 'upload', isPdfStepReview: s.pdfStep === 'review',
+      onPdfFileChange: this.onPdfFileChange, pdfBusy: s.pdfBusy, pdfError: s.pdfError, pdfForm: s.pdfForm,
+      onPdfFieldTypeKey: this.onPdfFieldTypeKey, onPdfFieldDni: this.onPdfFieldDni, onPdfFieldApellido: this.onPdfFieldApellido,
+      onPdfFieldNombre: this.onPdfFieldNombre, onPdfFieldAseguradora: this.onPdfFieldAseguradora, onPdfFieldNPoliza: this.onPdfFieldNPoliza,
+      onPdfFieldSumaAsegurada: this.onPdfFieldSumaAsegurada, onPdfFieldPrima: this.onPdfFieldPrima,
+      onPdfFieldVigenciaDesde: this.onPdfFieldVigenciaDesde, onPdfFieldVigenciaHasta: this.onPdfFieldVigenciaHasta,
+      savePdfImport: this.savePdfImport,
     };
   }
 }
@@ -2006,4 +2401,5 @@ class Component extends DCLogic {
 </script>
 
 
-</sc-if></div>
+</div>
+</sc-if>
