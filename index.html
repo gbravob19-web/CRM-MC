@@ -665,9 +665,19 @@
         </div>
       </div>
 
-      <div class="field" style="max-width:360px; margin-bottom:var(--space-4);">
-        <label>Buscar</label>
-        <input class="input" type="text" placeholder="Nombre o DNI…" value="{{ search }}" sc-camel-on-change="{{ onSearchChange }}">
+      <div style="display:flex; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-4);">
+        <div class="field" style="max-width:360px; flex:1; min-width:220px;">
+          <label>Buscar</label>
+          <input class="input" type="text" placeholder="Nombre o DNI…" value="{{ search }}" sc-camel-on-change="{{ onSearchChange }}">
+        </div>
+        <div class="field" style="max-width:240px;">
+          <label>Pólizas</label>
+          <sc-raw-select class="input" value="{{ clientPolizaFilter }}" sc-camel-on-change="{{ onClientPolizaFilterChange }}">
+            <sc-for list="{{ clientPolizaFilterOptions }}" as="fo" hint-placeholder-count="3">
+              <option value="{{ fo.key }}">{{ fo.label }}</option>
+            </sc-for>
+          </sc-raw-select>
+        </div>
       </div>
 
       <div class="blueprint" style="padding:var(--space-3);">
@@ -1765,7 +1775,7 @@ class Component extends DCLogic {
     view: 'dashboard',
     selectedClientId: null,
     activeTab: 'resumen',
-    search: '',
+    search: '', clientPolizaFilter: 'all',
     clientDialogOpen: false, editingClientId: null, clientForm: emptyClientForm(),
     showAssetModal: false, editingAssetId: null, editingQuoteId: null, assetForm: emptyAssetForm(),
     showSiniestroModal: false, siniestroForm: { fecha: '', tipo: 'auto', estado: 'Abierto', descripcion: '' },
@@ -1966,6 +1976,7 @@ class Component extends DCLogic {
   selectClient = (id, tab) => this.setState({ view: 'clientDetail', selectedClientId: id, activeTab: tab || 'resumen' });
 
   onSearchChange = (e) => this.setState({ search: e.target.value });
+  onClientPolizaFilterChange = (e) => this.setState({ clientPolizaFilter: e.target.value });
 
   closeAllDialogs = () => ({ clientDialogOpen: false, showAssetModal: false, showSiniestroModal: false, showDocModal: false });
   openNewClientDialog = () => this.setState({ ...this.closeAllDialogs(), clientDialogOpen: true, editingClientId: null, clientForm: emptyClientForm() });
@@ -2402,11 +2413,16 @@ class Component extends DCLogic {
 
     const search = s.search.trim().toLowerCase();
     const filteredClients = clients.filter(c => !search || nombreCompleto(c).toLowerCase().includes(search) || c.dni.includes(search));
+    const clientPolizaFilterOptions = [
+      { key: 'all', label: 'Todos' },
+      { key: 'active', label: 'Con pólizas activas' },
+      { key: 'none', label: 'Sin pólizas activas' },
+    ];
     const clientRows = filteredClients.map(c => {
       const bienesCount = ASSET_TYPES.reduce((n, t) => n + (c.bienes[t.key] || []).length, 0);
       const activas = ASSET_TYPES.reduce((n, t) => n + (c.bienes[t.key] || []).filter(a => estadoFor(a.vigenciaHasta).estado !== 'Vencida').length, 0);
       return { nombre: nombreCompleto(c), dni: c.dni, contacto: c.telefono, bienesCount, polizasActivas: activas, actualizado: c.actualizado, onClick: () => this.selectClient(c.id) };
-    });
+    }).filter(c => s.clientPolizaFilter === 'active' ? c.polizasActivas > 0 : s.clientPolizaFilter === 'none' ? c.polizasActivas === 0 : true);
 
     const selectedClient = clients.find(c => c.id === s.selectedClientId) || clients[0] || null;
 
@@ -2526,6 +2542,7 @@ class Component extends DCLogic {
       openCotizacionesModal: this.openCotizacionesModal, closeCotizacionesModal: this.closeCotizacionesModal, showCotizacionesModal: s.showCotizacionesModal, cotizaciones30Rows, noCotizaciones30: cotizaciones30Rows.length === 0,
       recentQuotes, noQuotes: recentQuotes.length === 0,
       search: s.search, onSearchChange: this.onSearchChange, filteredClientsCount: clientRows.length, clientRows, noClients: clientRows.length === 0,
+      clientPolizaFilter: s.clientPolizaFilter, onClientPolizaFilterChange: this.onClientPolizaFilterChange, clientPolizaFilterOptions,
       openNewClientDialog: this.openNewClientDialog, openEditClientDialog: this.openEditClientDialog,
       quoteSearchDialogOpen: s.quoteSearchDialogOpen, quoteSearch: s.quoteSearch, onQuoteSearchChange: this.onQuoteSearchChange,
       openQuoteSearchDialog: this.openQuoteSearchDialog, closeQuoteSearchDialog: this.closeQuoteSearchDialog, openNewClientFromQuote: this.openNewClientFromQuote,
