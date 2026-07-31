@@ -1187,6 +1187,7 @@
             <p style="color:#b00020; font-size:13px;">{{ importError }}</p>
           </sc-if>
           <p class="text-muted" style="font-size:13px;">Cada fila del archivo se carga como una póliza vigente. Si el DNI de la fila coincide con un cliente existente, se le agrega la póliza; si no, se crea un cliente nuevo.</p>
+          <p class="text-muted" style="font-size:13px;">Si es un registro de operaciones SSN, el tipo de riesgo se detecta solo. Nombrá el archivo con el nombre de la aseguradora (ej. "Mercantil Andina.xml") para que se cargue automáticamente.</p>
         </sc-if>
 
         <sc-if value="{{ isImportStepMap }}" hint-placeholder-val="{{ false }}">
@@ -1224,7 +1225,7 @@
           <sc-if value="{{ importSsnSkippedCount }}" hint-placeholder-val="{{ false }}">
             <p class="text-muted" style="font-size:13px;">{{ importSsnSkippedCount }} filas son anulaciones y no se importan.</p>
           </sc-if>
-          <p class="text-muted" style="font-size:13px;">La aseguradora se carga con su código SSN (ej. "Cía 116") — podés corregir el nombre real después desde cada póliza.</p>
+          <p class="text-muted" style="font-size:13px;">La aseguradora se toma del nombre del archivo importado (ej. "Mercantil Andina.xml" → Mercantil) — para que se detecte bien, nombrá el archivo con el nombre de la aseguradora antes de subirlo. Podés corregir el nombre después desde cada póliza.</p>
         </sc-if>
 
         <sc-if value="{{ isImportStepResult }}" hint-placeholder-val="{{ false }}">
@@ -1622,12 +1623,26 @@ function buildSsnDetails(typeKey, bienAsegurado) {
 function detectSSNCsv(headers) {
   return headers.includes('AsegNombre') && headers.includes('BienAsegurado') && headers.includes('Ramo');
 }
+function findCol(headers, names) {
+  for (const n of names) {
+    const idx = headers.indexOf(n);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+function aseguradoraFromFilename(filename) {
+  const base = (filename || '').replace(/\.[^.\/]+$/, '');
+  const cleaned = base.replace(/[_\-]+/g, ' ').trim();
+  const word = cleaned.split(/\s+/)[0] || '';
+  if (!word || !/[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(word)) return '';
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
 function parseSSNCsvRows(headers, rows) {
   const col = (name) => headers.indexOf(name);
   const cAsegTipo = col('AsegTipo'), cAsegNombre = col('AsegNombre'), cAsegTipoDoc = col('AsegTipoDoc'),
     cAsegNroDoc = col('AsegNroDoc'), cAsegCalle = col('AsegCalle'), cAsegNro = col('AsegNro'),
     cAsegProvincia = col('AsegProvincia'), cAsegLocalidad = col('AsegLocalidad'), cAsegCP = col('AsegCP'),
-    cProdNombre = col('ProdNombre'), cCIAId = col('CIAId'), cObsNroPoliza = col('ObsNroPoliza'),
+    cProdNombre = findCol(headers, ['ProdNombre', 'PAS', 'Productor', 'NombreProductor']), cCIAId = col('CIAId'), cObsNroPoliza = col('ObsNroPoliza'),
     cSumaAsegurada = col('SumaAsegurada'), cCobertDesde = col('CobertFechaDesde'), cCobertHasta = col('CobertFechaHasta'),
     cBienAsegurado = col('BienAsegurado'), cRamo = col('Ramo'), cObsTipoSSN = col('ObsTipoSSN');
   return rows.map((r) => {
@@ -1971,13 +1986,16 @@ class Component extends DCLogic {
         return;
       }
       const text = await file.text();
+      const aseguradoraLabel = aseguradoraFromFilename(file.name);
       if (/<BienAsegurado>/.test(text)) {
-        this.setState({ importSsnRows: parseSSNXml(text), importStep: 'ssn-preview' });
+        const ssnRows = parseSSNXml(text).map((r) => ({ ...r, aseguradora: aseguradoraLabel || r.aseguradora }));
+        this.setState({ importSsnRows: ssnRows, importStep: 'ssn-preview' });
         return;
       }
       const { headers, rows } = parseCsvText(text);
       if (detectSSNCsv(headers)) {
-        this.setState({ importSsnRows: parseSSNCsvRows(headers, rows), importStep: 'ssn-preview' });
+        const ssnRows = parseSSNCsvRows(headers, rows).map((r) => ({ ...r, aseguradora: aseguradoraLabel || r.aseguradora }));
+        this.setState({ importSsnRows: ssnRows, importStep: 'ssn-preview' });
         return;
       }
       if (!headers.length) throw new Error('No se detectaron columnas en el archivo.');
